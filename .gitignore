@@ -38,3 +38,5 @@ temp_*/
 
 ## Local docs (excluded from GitHub sync)
 /VIVO_COMMANDS.md
+
+output/

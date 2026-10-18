@@ -165,6 +165,7 @@ public partial class MainWindow : Window, IViewHost
         var hwnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
+        _appWindow.SetIcon(System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "VisualAssets", "tuopan.ico"));
         _appWindow.Resize(new SizeInt32(1100, 740));
 
         var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);

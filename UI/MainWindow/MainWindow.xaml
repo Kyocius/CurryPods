@@ -9,7 +9,11 @@
     </Window.SystemBackdrop>
     <Grid x:Name="RootPanel" RowDefinitions="Auto,*">
         <Image x:Name="BgFullImage" Grid.RowSpan="2" Stretch="UniformToFill" Opacity="0.85" Visibility="Collapsed"/>
-        <TitleBar x:Name="WindowTitleBar" Title="CurryPods" />
+        <TitleBar x:Name="WindowTitleBar" Title="CurryPods">
+            <TitleBar.IconSource>
+                <ImageIconSource ImageSource="ms-appx:///Assets/VisualAssets/AppIcon.png" />
+            </TitleBar.IconSource>
+        </TitleBar>
         <NavigationView x:Name="AppNavigation" Grid.Row="1"
                         PaneDisplayMode="Auto" OpenPaneLength="200" CompactPaneLength="48"
                         ExpandedModeThresholdWidth="800" CompactModeThresholdWidth="640"
