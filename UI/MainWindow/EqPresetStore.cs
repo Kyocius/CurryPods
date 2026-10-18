@@ -11,4 +11,5 @@ public sealed class EqPresetItem
     public int EqId { get; set; }
     public bool IsDeviceEntry => EqId != 0;
     public bool ShowDelete => IsCustom || IsDeviceEntry;
+    public Microsoft.UI.Xaml.Visibility DeleteVisibility => ShowDelete ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
 }

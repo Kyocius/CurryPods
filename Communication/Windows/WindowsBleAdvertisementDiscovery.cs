@@ -9,6 +9,7 @@ namespace OppoPodsManager.Communication.Windows;
 public sealed class WindowsBleAdvertisementDiscovery : IDeviceDiscoveryMonitor
 {
     private readonly BleAdvertisementHub _hub;
+    private readonly bool _ownsHub;
     private readonly EventHandler<AppleAdvertisementEventArgs> _onAdvertisement;
     private HashSet<string> _lastStableIds = new(StringComparer.Ordinal);
     private long _generation;
@@ -16,9 +17,10 @@ public sealed class WindowsBleAdvertisementDiscovery : IDeviceDiscoveryMonitor
 
     public event EventHandler<DeviceCandidatesChangedEventArgs>? DevicesChanged;
 
-    public WindowsBleAdvertisementDiscovery(BleAdvertisementHub hub)
+    public WindowsBleAdvertisementDiscovery(BleAdvertisementHub hub, bool ownsHub = false)
     {
         _hub = hub;
+        _ownsHub = ownsHub;
         _onAdvertisement = OnHubAdvertisement;
         _hub.AdvertisementReceived += _onAdvertisement;
     }
@@ -58,7 +60,10 @@ public sealed class WindowsBleAdvertisementDiscovery : IDeviceDiscoveryMonitor
             return;
         _disposed = true;
         _hub.AdvertisementReceived -= _onAdvertisement;
-        try { _hub.Stop(); } catch { }
+        if (_ownsHub)
+            _hub.Dispose();
+        else
+            _hub.Stop();
     }
 
     private void OnHubAdvertisement(object? sender, AppleAdvertisementEventArgs e)

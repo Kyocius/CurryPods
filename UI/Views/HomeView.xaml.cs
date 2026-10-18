@@ -1,10 +1,25 @@
-﻿using Avalonia.Controls.Shapes;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Shapes;
+using Path = Microsoft.UI.Xaml.Shapes.Path;
+using OppoPodsManager.Assets.Localization;
 using OppoPodsManager.Assets.VisualAssets;
 using OppoPodsManager.Control.Brands.Oppo.Features;
-using OppoPodsManager.UI.MainWindow;
-using AvaloniaControl = Avalonia.Controls.Control;
-using Path = Avalonia.Controls.Shapes.Path;
 using OppoPodsManager.Control.Core.Features;
+using OppoPodsManager.Control.Core.Models;
+using OppoPodsManager.UI.MainWindow;
+
+using OppoPodsManager.Assets.UserSettings;
+using OppoPodsManager.Control.Abstractions;
+using OppoPodsManager.Control.Subsystems.Desktop;
+using OppoPodsManager.Control.Subsystems.Logging;
 
 namespace OppoPodsManager.UI.Views;
 
@@ -14,8 +29,32 @@ namespace OppoPodsManager.UI.Views;
 /// 外壳 MainWindow 经 <see cref="ApplySnapshot"/> 路由快照，并经 IViewHost 提供查找耳机警告、EQ 控件启用等外壳级能力。
 /// 共享画刷统一取自 <see cref="AppPalette"/>（与后续小窗复用）。
 /// </summary>
-public partial class HomeView : PageView
+public partial class HomeView : UserControl, IPageView
 {
+    public IViewHost? Host { get; set; }
+    private ControlManager? ControlManager;
+    private SettingsStore UiSettings = null!;
+    private ApplicationLog? Log;
+    private CommandDispatcher? CommandDispatcher;
+    private FrontendState? FrontendState;
+    private DesktopLinkService? DesktopLinks;
+
+    public void Attach(
+        ControlManager? controlManager,
+        SettingsStore uiSettings,
+        ApplicationLog? log,
+        CommandDispatcher? commandDispatcher,
+        FrontendState? frontendState,
+        DesktopLinkService? desktopLinks)
+    {
+        ControlManager = controlManager;
+        UiSettings = uiSettings;
+        Log = log;
+        CommandDispatcher = commandDispatcher;
+        FrontendState = frontendState;
+        DesktopLinks = desktopLinks;
+    }
+
     // ---- 设备连接状态 ----
     private readonly List<DeviceConnectionOption> _nextDevices = new();
     private bool _suppressEarbudSelection;
@@ -42,25 +81,25 @@ public partial class HomeView : PageView
         InitializeComponent();
 
         // 功能开关（原 MainWindow ctor 程序化接线，现由本视图自持）
-        CbSpatial.IsCheckedChanged += CbSpatial_Changed;
-        CbGame.IsCheckedChanged += CbGame_Changed;
-        CbGameSound.IsCheckedChanged += CbGameSound_Changed;
-        CbDualDevice.IsCheckedChanged += CbDualDevice_Changed;
-        CbBassEngine.IsCheckedChanged += CbBassEngine_Changed;
-        CbVocalEnhance.IsCheckedChanged += CbVocalEnhance_Changed;
-        CbHearingEnhance.IsCheckedChanged += CbHearingEnhance_Changed;
-        CbLongPower.IsCheckedChanged += CbLongPower_Changed;
-        CbWearDetection.IsCheckedChanged += CbWearDetection_Changed;
-        CbSpineHealth.IsCheckedChanged += CbSpineHealth_Changed;
+        WireCheckBox(CbSpatial, CbSpatial_Changed);
+        WireCheckBox(CbGame, CbGame_Changed);
+        WireCheckBox(CbGameSound, CbGameSound_Changed);
+        WireCheckBox(CbDualDevice, CbDualDevice_Changed);
+        WireCheckBox(CbBassEngine, CbBassEngine_Changed);
+        WireCheckBox(CbVocalEnhance, CbVocalEnhance_Changed);
+        WireCheckBox(CbHearingEnhance, CbHearingEnhance_Changed);
+        WireCheckBox(CbLongPower, CbLongPower_Changed);
+        WireCheckBox(CbWearDetection, CbWearDetection_Changed);
+        WireCheckBox(CbSpineHealth, CbSpineHealth_Changed);
         CbDevice.SelectionChanged += CbDevice_Changed;
 
-        // 充电闪电图标（与设备信息页触控图同源，支持自定义图片覆盖）
-        const string iconCharge = "M0.009,7.21C-0.023,7.286 0.032,7.37 0.115,7.37H3.303V11.885C3.303,12.011 3.476,12.045 3.524,11.929L6.6,4.471C6.631,4.396 6.575,4.313 6.494,4.313H3.303V0.115C3.303,-0.01 3.132,-0.045 3.083,0.069L0.009,7.21Z";
-        LeftChargeBolt.Data = StreamGeometry.Parse(iconCharge);
-        RightChargeBolt.Data = StreamGeometry.Parse(iconCharge);
-        CaseChargeBolt.Data = StreamGeometry.Parse(iconCharge);
-
         ResetNextAncUi();
+    }
+
+    private static void WireCheckBox(CheckBox cb, RoutedEventHandler handler)
+    {
+        cb.Checked += handler;
+        cb.Unchecked += handler;
     }
 
     /// <summary>外壳在窗口关闭时调用，避免异步回追访问已释放控件。</summary>
@@ -71,9 +110,9 @@ public partial class HomeView : PageView
     public Image BatteryRightImage => RightBatteryImage;
     public Image BatteryCaseImage => CaseBatteryImage;
 
-    public void SetAncPanelVisible(bool visible) => AncPanel.IsVisible = visible;
+    public void SetAncPanelVisible(bool visible) => AncPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
 
-    public override void ApplySnapshot(BusinessSnapshot snapshot)
+    public void ApplySnapshot(BusinessSnapshot snapshot)
     {
         if (_realClose)
             return;
@@ -88,12 +127,12 @@ public partial class HomeView : PageView
                 snapshot.Wear.Left == EarWearState.Unknown ? null : DeviceText.WearState(snapshot.Wear.Left),
                 snapshot.Wear.Right == EarWearState.Unknown ? null : DeviceText.WearState(snapshot.Wear.Right)
             }.Where(text => !string.IsNullOrWhiteSpace(text)));
-        WearStatus.IsVisible = !string.IsNullOrWhiteSpace(WearStatus.Text);
+        WearStatus.Visibility = !string.IsNullOrWhiteSpace(WearStatus.Text) ? Visibility.Visible : Visibility.Collapsed;
 
         ApplyNextFeatureState(snapshot);
         ApplyNextSpatialAudioSnapshot(snapshot);
         ApplyNextNoiseSnapshot(snapshot);
-        BtnReconnect.IsVisible = !snapshot.IsConnected;
+        BtnReconnect.Visibility = !snapshot.IsConnected ? Visibility.Visible : Visibility.Collapsed;
     }
 
     #region 连接状态与设备列表（原 MainWindow.Device.cs）
@@ -137,23 +176,16 @@ public partial class HomeView : PageView
             : unidentifiedText;
     }
 
-    private async void RefreshDevices_Click(object? sender, RoutedEventArgs e)
+    private async void RefreshDevices_Click(object sender, RoutedEventArgs e)
     {
         Log?.Debug("UI", "用户操作: 刷新多耳机列表");
         if (ControlManager is null)
             return;
 
-        // 注意：绝不能在此用 .GetResult()/.Result 同步阻塞 UI 线程——
-        // 扫描链路(DiscoverAsync)跨线程执行，结束后续体需要回到 UI 线程才能跑完，
-        // 而 GetResult() 会把 UI 线程占死，造成永久卡死(界面无响应)。改为 await 并在 UI 线程回写。
-        //
-        // 另：async void 里抛出的异常会直接交给 SynchronizationContext，没有任何调用方能接住 ——
-        // 调试器中断，严重时进程退出。刷新失败属于常态（蓝牙栈忙、耳机刚断开、设备列表变化中），
-        // 必须就地消化。
         try
         {
             var devices = await ControlManager.RefreshAvailableDevicesAsync(CancellationToken.None);
-            await Dispatcher.UIThread.InvokeAsync(() => ApplyNextDevices(devices));
+            AppDispatcher.Post(() => ApplyNextDevices(devices));
         }
         catch (Exception exception)
         {
@@ -163,6 +195,8 @@ public partial class HomeView : PageView
 
     internal void ApplyNextDevices(IReadOnlyList<DeviceConnectionOption> devices)
     {
+        if (_realClose)
+            return;
         var selectedId = (CbDevice.SelectedItem as DeviceConnectionOption)?.Id
             ?? ControlManager?.ActiveDeviceId;
         _nextDevices.Clear();
@@ -171,8 +205,8 @@ public partial class HomeView : PageView
         CbDevice.Items.Clear();
         foreach (var device in _nextDevices)
             CbDevice.Items.Add(device);
-        CbDevice.IsVisible = _nextDevices.Count > 0;
-        BtnRefreshDevices.IsVisible = _nextDevices.Count > 0;
+        CbDevice.Visibility = _nextDevices.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        BtnRefreshDevices.Visibility = _nextDevices.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         var selectedIndex = selectedId is null
             ? -1
@@ -184,7 +218,7 @@ public partial class HomeView : PageView
         Log?.Debug("UI", $"设备选择列表已更新：count={_nextDevices.Count}，selected={selectedId ?? ""}。");
     }
 
-    private void CbDevice_Changed(object? sender, SelectionChangedEventArgs e)
+    private void CbDevice_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEarbudSelection || ControlManager is null
             || CbDevice.SelectedIndex < 0 || CbDevice.SelectedIndex >= _nextDevices.Count)
@@ -195,7 +229,7 @@ public partial class HomeView : PageView
         _ = ConnectNextDeviceAsync(selected.Id);
     }
 
-    private void Reconnect_Click(object? s, RoutedEventArgs e)
+    private void Reconnect_Click(object sender, RoutedEventArgs e)
     {
         Log?.Debug("UI", "用户操作: 点击重连");
         _ = ConnectNextDeviceAsync(null);
@@ -206,10 +240,6 @@ public partial class HomeView : PageView
         if (ControlManager is null)
             return;
 
-        // 本方法由多处 fire-and-forget 调用（`_ = ConnectNextDeviceAsync(...)`）触发，没有调用方 await；
-        // 异常一旦逃逸就成为「未观察的 Task 异常」，从线程池冒出（堆栈里就是
-        // RunFromThreadPoolDispatchLoop），表现为调试器中断 + 用户侧「未在用户代码中进行处理」。
-        // 因此在这里自行消化：连接失败是常态（耳机被手机占着 SPP 通道等），不该以异常形式传播。
         try
         {
             if (string.IsNullOrWhiteSpace(deviceId))
@@ -229,12 +259,18 @@ public partial class HomeView : PageView
             return;
 
         var devices = await ControlManager.RefreshAvailableDevicesAsync(CancellationToken.None);
-        await Dispatcher.UIThread.InvokeAsync(() => ApplyNextDevices(devices));
+        AppDispatcher.Post(() => ApplyNextDevices(devices));
     }
 
     #endregion
 
     #region ANC 动态 UI（原 MainWindow.Anc.cs）
+
+    private static Geometry ParseGeometry(string pathData)
+    {
+        return ((Path)Microsoft.UI.Xaml.Markup.XamlReader.Load(
+            $"<Path xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Data=\"{pathData}\"/>")).Data;
+    }
 
     private void BuildAncUi(string modelKey, IReadOnlyList<NoiseOptionModel> options)
     {
@@ -254,16 +290,16 @@ public partial class HomeView : PageView
         AncSubRow.ColumnDefinitions.Clear();
         _ancSubButtons.Clear();
         _ancSubSignature = "";
-        AncSubRow.IsVisible = false;
+        AncSubRow.Visibility = Visibility.Collapsed;
 
         if (_ancOptions.Count == 0)
         {
-            AncPlaceholderText.IsVisible = true;
-            AncMainRow.IsVisible = false;
+            AncPlaceholderText.Visibility = Visibility.Visible;
+            AncMainRow.Visibility = Visibility.Collapsed;
             return;
         }
-        AncPlaceholderText.IsVisible = false;
-        AncMainRow.IsVisible = true;
+        AncPlaceholderText.Visibility = Visibility.Collapsed;
+        AncMainRow.Visibility = Visibility.Visible;
 
         int col = 0;
         for (int i = 0; i < _ancOptions.Count; i++)
@@ -318,9 +354,9 @@ public partial class HomeView : PageView
             btn.Content = DeviceProfileLoader.AncLabel(key);
     }
 
-    private void AddToRow(Grid row, AvaloniaControl c, ref int col)
+    private void AddToRow(Grid row, FrameworkElement c, ref int col)
     {
-        row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(c, col);
         row.Children.Add(c);
         col++;
@@ -328,13 +364,13 @@ public partial class HomeView : PageView
 
     private static void AddSpacer(Grid row, ref int col, int width)
     {
-        row.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(width)));
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width) });
         col++;
     }
 
     private void AddSeparator(Grid row, ref int col)
     {
-        row.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var sep = new Border { Width = 1, Background = AppPalette.BrushGray, Opacity = 0.12 };
         Grid.SetColumn(sep, col);
         row.Children.Add(sep);
@@ -376,18 +412,16 @@ public partial class HomeView : PageView
         if (opt.Children.Count > 0)
         {
             PopulateAncSub(opt);
-            AncSubRow.IsVisible = true;
+            AncSubRow.Visibility = Visibility.Visible;
             var target = _ancLastSub.TryGetValue(opt.Key, out var last)
                 && opt.Children.Any(c => c.Key == last)
                 ? last : opt.Children[0].Key;
             _ancLevel = target;
-            // 对齐 main 分支：容器型（降噪）下发“上次子模式/首子模式”位，而非父码 01 01 02。
-            // 父码不被欢律使用，且会让耳机恢复上次子模式导致 UI 回弹；具体子模式位由耳机回报同步。
             _ = CommandDispatcher?.RunAsync("ANC 主模式", manager => manager.SetNoiseCancellationByKeyAsync(target, CancellationToken.None));
         }
         else
         {
-            AncSubRow.IsVisible = false;
+            AncSubRow.Visibility = Visibility.Collapsed;
             _ancLevel = "";
             _ = CommandDispatcher?.RunAsync("ANC 主模式", manager => manager.SetNoiseCancellationByKeyAsync(opt.Key, CancellationToken.None));
         }
@@ -404,14 +438,14 @@ public partial class HomeView : PageView
         HighlightAnc();
     }
 
-    private void AncMain_Click(object? s, RoutedEventArgs e)
+    private void AncMain_Click(object sender, RoutedEventArgs e)
     {
-        if (s is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncMain(opt);
+        if (sender is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncMain(opt);
     }
 
-    private void AncSub_Click(object? s, RoutedEventArgs e)
+    private void AncSub_Click(object sender, RoutedEventArgs e)
     {
-        if (s is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncSub(opt);
+        if (sender is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncSub(opt);
     }
 
     private void SyncAncFromState(string modeKey)
@@ -421,7 +455,7 @@ public partial class HomeView : PageView
         {
             _ancMain = modeKey;
             _ancLevel = "";
-            AncSubRow.IsVisible = false;
+            AncSubRow.Visibility = Visibility.Collapsed;
             return;
         }
 
@@ -434,7 +468,7 @@ public partial class HomeView : PageView
                 _ancLevel = modeKey;
                 _ancLastSub[parentKey] = modeKey;
                 PopulateAncSub(container);
-                AncSubRow.IsVisible = true;
+                AncSubRow.Visibility = Visibility.Visible;
             }
         }
     }
@@ -444,13 +478,13 @@ public partial class HomeView : PageView
         var manager = ControlManager?.ActiveManager;
         if (manager is null || !snapshot.IsConnected)
         {
-            AncPanel.IsVisible = true;
+            AncPanel.Visibility = Visibility.Visible;
             ResetNextAncUi();
             return;
         }
 
         var presentation = manager.Presentation;
-        AncPanel.IsVisible = true;
+        AncPanel.Visibility = Visibility.Visible;
         if (!presentation.SupportsNoiseCancellation)
         {
             ResetNextAncUi();
@@ -471,11 +505,11 @@ public partial class HomeView : PageView
             AncRealtimeHint.Text = string.Format(
                 TranslationCatalog.Get("Anc_RealtimeHint"),
                 DeviceText.NoiseModeName(smartLevel));
-            AncRealtimeHint.IsVisible = true;
+            AncRealtimeHint.Visibility = Visibility.Visible;
         }
         else
         {
-            AncRealtimeHint.IsVisible = false;
+            AncRealtimeHint.Visibility = Visibility.Collapsed;
         }
     }
 
@@ -490,21 +524,21 @@ public partial class HomeView : PageView
         {
             _gameSoundCommandPending = false;
             if (!_realClose && FrontendState is not null)
-                await Dispatcher.UIThread.InvokeAsync(() => ApplyNextFeatureState(FrontendState.Snapshot));
+                AppDispatcher.Post(() => ApplyNextFeatureState(FrontendState.Snapshot));
         }
     }
 
     internal void ResetNextAncUi()
     {
-        AncPanel.IsVisible = true;
+        AncPanel.Visibility = Visibility.Visible;
         AncMainRow.Children.Clear();
         AncMainRow.ColumnDefinitions.Clear();
         AncSubRow.Children.Clear();
         AncSubRow.ColumnDefinitions.Clear();
-        AncSubRow.IsVisible = false;
-        AncMainRow.IsVisible = false;
-        AncPlaceholderText.IsVisible = true;
-        AncRealtimeHint.IsVisible = false;
+        AncSubRow.Visibility = Visibility.Collapsed;
+        AncMainRow.Visibility = Visibility.Collapsed;
+        AncPlaceholderText.Visibility = Visibility.Visible;
+        AncRealtimeHint.Visibility = Visibility.Collapsed;
         _ancBuiltForModel = string.Empty;
         _ancSubSignature = string.Empty;
         _ancOptions = new List<NoiseOptionModel>();
@@ -515,9 +549,9 @@ public partial class HomeView : PageView
         _ancLevel = string.Empty;
     }
 
-    private (AvaloniaControl panel, Ellipse bg, Ellipse stroke, Path icon, TextBlock label) MakeAncIconButton(
+    private (FrameworkElement panel, Ellipse bg, Ellipse stroke, Path icon, TextBlock label) MakeAncIconButton(
         NoiseOptionModel opt, int circleSize, int iconSize, int fontSize,
-        EventHandler<RoutedEventArgs> onClick)
+        RoutedEventHandler onClick)
     {
         var bg = new Ellipse
         {
@@ -526,10 +560,10 @@ public partial class HomeView : PageView
         };
         var icon = new Path
         {
-            Data = StreamGeometry.Parse(AncIcons.GetAncIcon(opt.Key)),
+            Data = ParseGeometry(AncIcons.GetAncIcon(opt.Key)),
             Width = 24, Height = 24,
             Fill = AppPalette.BrushGray,
-            Stretch = Stretch.None,
+            Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center
         };
@@ -538,21 +572,15 @@ public partial class HomeView : PageView
         {
             Width = circleSize, Height = circleSize,
             Background = AppPalette.BrushTransparent, BorderThickness = new Thickness(0),
-            Tag = opt,
-            Cursor = new Cursor(StandardCursorType.Hand)
+            Tag = opt
         };
         clickBtn.Click += onClick;
 
         var grid = new Grid { Width = circleSize, Height = circleSize };
-        var hoverScale = new ScaleTransform(1, 1);
+        var hoverScale = new ScaleTransform { ScaleX = 1.0, ScaleY = 1.0, CenterX = circleSize / 2.0, CenterY = circleSize / 2.0 };
         grid.RenderTransform = hoverScale;
-        grid.RenderTransformOrigin = new RelativePoint(0.5, 0.5, RelativeUnit.Relative);
-        grid.Transitions = new Transitions
-        {
-            new TransformOperationsTransition { Property = Grid.RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(180), Easing = new CubicEaseOut() }
-        };
         grid.PointerEntered += (_, _) => { hoverScale.ScaleX = 1.08; hoverScale.ScaleY = 1.08; };
-        grid.PointerExited += (_, _) => { hoverScale.ScaleX = 1; hoverScale.ScaleY = 1; };
+        grid.PointerExited += (_, _) => { hoverScale.ScaleX = 1.0; hoverScale.ScaleY = 1.0; };
         grid.Children.Add(bg);
         grid.Children.Add(icon);
         grid.Children.Add(clickBtn);
@@ -575,13 +603,13 @@ public partial class HomeView : PageView
         return (panel, bg, bg, icon, label);
     }
 
-    private (Button, Border) MakeTextButton(string label, NoiseOptionModel opt, int w, int h, int fontSize, CornerRadius corner, EventHandler<RoutedEventArgs> onClick)
+    private (Button, Border) MakeTextButton(string label, NoiseOptionModel opt, int w, int h, int fontSize, CornerRadius corner, RoutedEventHandler onClick)
     {
         var btn = new Button
         {
             Content = label, Tag = opt, MinWidth = w, Height = h,
-            BorderThickness = new Thickness(0), Padding = new Thickness(8, 0),
-            Background = AppPalette.BrushTransparent, Focusable = false,
+            BorderThickness = new Thickness(0), Padding = new Thickness(8, 0, 8, 0),
+            Background = AppPalette.BrushTransparent,
             Foreground = AppPalette.BrushGray, FontSize = fontSize,
             HorizontalContentAlignment = HorizontalAlignment.Center
         };
@@ -599,11 +627,11 @@ public partial class HomeView : PageView
         var manager = ControlManager?.ActiveManager;
         var presentation = manager?.Presentation;
         var hasFeatures = snapshot.IsConnected && presentation is not null;
-        FeatureContentPanel.IsVisible = hasFeatures;
-        FeaturePlaceholderText.IsVisible = !hasFeatures;
+        FeatureContentPanel.Visibility = hasFeatures ? Visibility.Visible : Visibility.Collapsed;
+        FeaturePlaceholderText.Visibility = !hasFeatures ? Visibility.Visible : Visibility.Collapsed;
         if (!hasFeatures)
         {
-            BtnFindDevice.IsVisible = false;
+            BtnFindDevice.Visibility = Visibility.Collapsed;
             SetFeatureControlsEnabled(false);
             _findDeviceActive = false;
             BtnFindDevice.Content = TranslationCatalog.Get("Feature_FindDevice");
@@ -614,31 +642,31 @@ public partial class HomeView : PageView
         var controlStates = presentation.ControlStates;
         var controlEnabledStates = presentation.ControlEnabledStates;
         SetFeatureControlsEnabled(controlEnabledStates);
-        CbDualDevice.IsVisible = visibleControls.Contains("dual-device");
-        CbBassEngine.IsVisible = visibleControls.Contains("bass-engine");
-        CbVocalEnhance.IsVisible = visibleControls.Contains("voice-enhancement");
-        CbHearingEnhance.IsVisible = visibleControls.Contains("hearing-enhancement");
-        CbLongPower.IsVisible = visibleControls.Contains("long-battery");
-        CbWearDetection.IsVisible = visibleControls.Contains("wear-detection");
-        CbSpineHealth.IsVisible = visibleControls.Contains("spine-health");
-        CbSpatial.IsVisible = visibleControls.Contains("spatial-sound");
-        CbGameSound.IsVisible = visibleControls.Contains("game-sound");
-        CbGame.IsVisible = visibleControls.Contains("game-mode");
-        BtnFindDevice.IsVisible = visibleControls.Contains("find-device");
-        var hasVisibleFeature = CbDualDevice.IsVisible
-            || CbBassEngine.IsVisible
-            || CbVocalEnhance.IsVisible
-            || CbHearingEnhance.IsVisible
-            || CbLongPower.IsVisible
-            || CbWearDetection.IsVisible
-            || CbSpineHealth.IsVisible
-            || CbSpatial.IsVisible
-            || CbGameSound.IsVisible
-            || CbGame.IsVisible
-            || BtnFindDevice.IsVisible;
-        FeatureContentPanel.IsVisible = hasVisibleFeature;
-        FeaturePlaceholderText.IsVisible = !hasVisibleFeature;
-        BtnFindDevice.IsEnabled = BtnFindDevice.IsVisible && snapshot.IsConnected;
+        CbDualDevice.Visibility = visibleControls.Contains("dual-device") ? Visibility.Visible : Visibility.Collapsed;
+        CbBassEngine.Visibility = visibleControls.Contains("bass-engine") ? Visibility.Visible : Visibility.Collapsed;
+        CbVocalEnhance.Visibility = visibleControls.Contains("voice-enhancement") ? Visibility.Visible : Visibility.Collapsed;
+        CbHearingEnhance.Visibility = visibleControls.Contains("hearing-enhancement") ? Visibility.Visible : Visibility.Collapsed;
+        CbLongPower.Visibility = visibleControls.Contains("long-battery") ? Visibility.Visible : Visibility.Collapsed;
+        CbWearDetection.Visibility = visibleControls.Contains("wear-detection") ? Visibility.Visible : Visibility.Collapsed;
+        CbSpineHealth.Visibility = visibleControls.Contains("spine-health") ? Visibility.Visible : Visibility.Collapsed;
+        CbSpatial.Visibility = visibleControls.Contains("spatial-sound") ? Visibility.Visible : Visibility.Collapsed;
+        CbGameSound.Visibility = visibleControls.Contains("game-sound") ? Visibility.Visible : Visibility.Collapsed;
+        CbGame.Visibility = visibleControls.Contains("game-mode") ? Visibility.Visible : Visibility.Collapsed;
+        BtnFindDevice.Visibility = visibleControls.Contains("find-device") ? Visibility.Visible : Visibility.Collapsed;
+        var hasVisibleFeature = CbDualDevice.Visibility == Visibility.Visible
+            || CbBassEngine.Visibility == Visibility.Visible
+            || CbVocalEnhance.Visibility == Visibility.Visible
+            || CbHearingEnhance.Visibility == Visibility.Visible
+            || CbLongPower.Visibility == Visibility.Visible
+            || CbWearDetection.Visibility == Visibility.Visible
+            || CbSpineHealth.Visibility == Visibility.Visible
+            || CbSpatial.Visibility == Visibility.Visible
+            || CbGameSound.Visibility == Visibility.Visible
+            || CbGame.Visibility == Visibility.Visible
+            || BtnFindDevice.Visibility == Visibility.Visible;
+        FeatureContentPanel.Visibility = hasVisibleFeature ? Visibility.Visible : Visibility.Collapsed;
+        FeaturePlaceholderText.Visibility = !hasVisibleFeature ? Visibility.Visible : Visibility.Collapsed;
+        BtnFindDevice.IsEnabled = BtnFindDevice.Visibility == Visibility.Visible && snapshot.IsConnected;
 
         SetNextCheck(CbDualDevice, controlStates, "dual-device", CbDualDevice_Changed);
         SetNextCheck(CbBassEngine, controlStates, "bass-engine", CbBassEngine_Changed);
@@ -698,7 +726,7 @@ public partial class HomeView : PageView
         var manager = ControlManager?.ActiveManager;
         if (manager is null || !snapshot.IsConnected)
         {
-            SpatialAudioPanel.IsVisible = false;
+            SpatialAudioPanel.Visibility = Visibility.Collapsed;
             SpatialAudioModes.Children.Clear();
             return;
         }
@@ -706,12 +734,12 @@ public partial class HomeView : PageView
         var enabled = manager.Presentation.SupportsSpatialAudio;
         if (!enabled)
         {
-            SpatialAudioPanel.IsVisible = false;
+            SpatialAudioPanel.Visibility = Visibility.Collapsed;
             SpatialAudioModes.Children.Clear();
             return;
         }
 
-        SpatialAudioPanel.IsVisible = true;
+        SpatialAudioPanel.Visibility = Visibility.Visible;
 
         if (SpatialAudioModes.Children.Count == 0)
         {
@@ -727,9 +755,9 @@ public partial class HomeView : PageView
                     Content = TranslationCatalog.Get(key),
                     Tag = mode,
                     GroupName = "SpatialAudioMode",
-                    Margin = new Thickness(8, 2)
+                    Margin = new Thickness(8, 2, 8, 2)
                 };
-                button.IsCheckedChanged += SpatialAudio_Changed;
+                button.Checked += SpatialAudio_Changed;
                 SpatialAudioModes.Children.Add(button);
             }
         }
@@ -744,12 +772,11 @@ public partial class HomeView : PageView
         {
             if (control is not RadioButton button || button.Tag is not string tag)
                 continue;
-            button.IsCheckedChanged -= SpatialAudio_Changed;
+            button.Checked -= SpatialAudio_Changed;
             button.IsChecked = tag == selected;
-            button.IsCheckedChanged += SpatialAudio_Changed;
+            button.Checked += SpatialAudio_Changed;
         }
     }
-
 
     #region 电量布局（按实际上报的槽位推导栏数）
 
@@ -793,9 +820,7 @@ public partial class HomeView : PageView
             SetBatteryColumns(1);
             for (var i = 0; i < panels.Length; i++)
             {
-                panels[i].IsVisible = i == source;
-                // 隐藏槽位也必须归到合法列。其 XAML 里写死的 Grid.Column=1/2 若留在树里，
-                // 列数缩小后会让 Grid 的 cell 缓存越界（详见 SetBatteryColumns 注释）。
+                panels[i].Visibility = i == source ? Visibility.Visible : Visibility.Collapsed;
                 Grid.SetColumn(panels[i], 0);
             }
             titles[source].Text = TranslationCatalog.Get("Battery_Title");
@@ -810,8 +835,7 @@ public partial class HomeView : PageView
         for (var i = 0; i < panels.Length; i++)
         {
             var isShown = shown.Contains(i);
-            panels[i].IsVisible = isShown;
-            // 未显示的槽位同样归到第 0 列，避免其残留列号超出当前列数。
+            panels[i].Visibility = isShown ? Visibility.Visible : Visibility.Collapsed;
             Grid.SetColumn(panels[i], isShown ? shown.IndexOf(i) : 0);
             if (!isShown)
                 continue;
@@ -821,11 +845,6 @@ public partial class HomeView : PageView
         ApplyBatteryImages(shown.Select(index => (index, defaultSlots[index])).ToArray());
     }
 
-    /// <summary>就地重建电量区的列定义。
-    /// 必须**修改现有集合**（Clear + Add），不能整体替换（<c>ColumnDefinitions = new ColumnDefinitions(...)</c>）：
-    /// 整体替换时 Grid 收不到定义变更通知、cell 缓存不会失效，旧缓存里 CaseBatteryPanel 的列号仍是 2，
-    /// 而新定义只剩 1~2 列，下一次测量会在 GetMeasureSizeForRange 里越界抛
-    /// ArgumentOutOfRangeException —— 布局过程被中断，整页呈现错乱与缺失。</summary>
     private void SetBatteryColumns(int count)
     {
         if (BatteryGrid.ColumnDefinitions.Count == count)
@@ -833,7 +852,7 @@ public partial class HomeView : PageView
 
         BatteryGrid.ColumnDefinitions.Clear();
         for (var i = 0; i < count; i++)
-            BatteryGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            BatteryGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
     }
 
     /// <summary>用户更换自定义耳机图案后由外壳调用，强制重设电量区图案。</summary>
@@ -862,45 +881,45 @@ public partial class HomeView : PageView
 
     #endregion
 
-    private static void SetNextBattery(TextBlock label, AvaloniaControl bolt, ProgressBar progress, BatteryLevel? battery)
+    private static void SetNextBattery(TextBlock label, FrameworkElement bolt, ProgressBar progress, BatteryLevel? battery)
     {
         if (battery is not { } value)
         {
             label.Text = "-%";
-            bolt.IsVisible = false;
+            bolt.Visibility = Visibility.Collapsed;
             progress.Value = 0;
-            progress.IsVisible = false;
+            progress.Visibility = Visibility.Collapsed;
             return;
         }
 
         label.Text = $"{value.Percent}%";
-        bolt.IsVisible = value.IsCharging;
+        bolt.Visibility = value.IsCharging ? Visibility.Visible : Visibility.Collapsed;
         progress.Value = value.Percent;
         progress.Foreground = value.Percent <= 20
             ? AppPalette.BrushBatteryLow
             : value.Percent <= 60 ? AppPalette.BrushBatteryMid : AppPalette.BrushBatteryHigh;
-        progress.IsVisible = true;
+        progress.Visibility = Visibility.Visible;
     }
 
-    private void SpatialAudio_Changed(object? s, RoutedEventArgs e)
+    private void SpatialAudio_Changed(object sender, RoutedEventArgs e)
     {
-        if (s is RadioButton button && button.IsChecked == true && button.Tag is string mode)
+        if (sender is RadioButton button && button.IsChecked == true && button.Tag is string mode)
             _ = CommandDispatcher?.RunAsync("空间音频", manager => manager.SetSpatialAudioByKeyAsync(mode, CancellationToken.None));
     }
 
-    private void CbSpatial_Changed(object? s, RoutedEventArgs e)
+    private void CbSpatial_Changed(object sender, RoutedEventArgs e)
     {
         if (CbSpatial.IsChecked is { } nextOn)
             _ = CommandDispatcher?.RunAsync("空间声场", manager => manager.SetSpatialSoundAsync(nextOn, CancellationToken.None));
     }
 
-    private void CbGame_Changed(object? s, RoutedEventArgs e)
+    private void CbGame_Changed(object sender, RoutedEventArgs e)
     {
         if (CbGame.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("游戏模式", manager => manager.SetGameModeAsync(enabled, CancellationToken.None));
     }
 
-    private void CbGameSound_Changed(object? s, RoutedEventArgs e)
+    private void CbGameSound_Changed(object sender, RoutedEventArgs e)
     {
         if (CbGameSound.IsChecked is { } enabled)
             _ = RunGameSoundCommandAsync(enabled);
@@ -910,15 +929,17 @@ public partial class HomeView : PageView
     {
         if (CbGameSound.IsChecked == value)
             return;
-        CbGameSound.IsCheckedChanged -= CbGameSound_Changed;
+        CbGameSound.Checked -= CbGameSound_Changed;
+        CbGameSound.Unchecked -= CbGameSound_Changed;
         CbGameSound.IsChecked = value;
-        CbGameSound.IsCheckedChanged += CbGameSound_Changed;
+        CbGameSound.Checked += CbGameSound_Changed;
+        CbGameSound.Unchecked += CbGameSound_Changed;
     }
 
-    private static void SetControlEnabledSilent(AvaloniaControl control, bool enabled)
+    private static void SetControlEnabledSilent(FrameworkElement control, bool enabled)
     {
-        if (control.IsEnabled != enabled)
-            control.IsEnabled = enabled;
+        if (control is Microsoft.UI.Xaml.Controls.Control c && c.IsEnabled != enabled)
+            c.IsEnabled = enabled;
     }
 
     private void SetGameSoundEnabledSilent(bool enabled)
@@ -929,54 +950,56 @@ public partial class HomeView : PageView
 
     private void SetGameCheckedSilent(bool value)
     {
-        CbGame.IsCheckedChanged -= CbGame_Changed;
+        CbGame.Checked -= CbGame_Changed;
+        CbGame.Unchecked -= CbGame_Changed;
         CbGame.IsChecked = value;
-        CbGame.IsCheckedChanged += CbGame_Changed;
+        CbGame.Checked += CbGame_Changed;
+        CbGame.Unchecked += CbGame_Changed;
     }
 
-    private void CbDualDevice_Changed(object? s, RoutedEventArgs e)
+    private void CbDualDevice_Changed(object sender, RoutedEventArgs e)
     {
         if (CbDualDevice.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("双设备", manager => manager.SetDualDeviceAsync(enabled, CancellationToken.None));
     }
 
-    private void CbBassEngine_Changed(object? s, RoutedEventArgs e)
+    private void CbBassEngine_Changed(object sender, RoutedEventArgs e)
     {
         if (CbBassEngine.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("低音引擎", manager => manager.SetBassEngineAsync(enabled, CancellationToken.None));
     }
 
-    private void CbVocalEnhance_Changed(object? s, RoutedEventArgs e)
+    private void CbVocalEnhance_Changed(object sender, RoutedEventArgs e)
     {
         if (CbVocalEnhance.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("人声增强", manager => manager.SetVoiceEnhancementAsync(enabled, CancellationToken.None));
     }
 
-    private void CbHearingEnhance_Changed(object? s, RoutedEventArgs e)
+    private void CbHearingEnhance_Changed(object sender, RoutedEventArgs e)
     {
         if (CbHearingEnhance.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("听力增强", manager => manager.SetHearingEnhancementAsync(enabled, CancellationToken.None));
     }
 
-    private void CbLongPower_Changed(object? s, RoutedEventArgs e)
+    private void CbLongPower_Changed(object sender, RoutedEventArgs e)
     {
         if (CbLongPower.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("长续航", manager => manager.SetLongBatteryAsync(enabled, CancellationToken.None));
     }
 
-    private void CbWearDetection_Changed(object? s, RoutedEventArgs e)
+    private void CbWearDetection_Changed(object sender, RoutedEventArgs e)
     {
         if (CbWearDetection.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("佩戴检测", manager => manager.SetWearDetectionAsync(enabled, CancellationToken.None));
     }
 
-    private void CbSpineHealth_Changed(object? s, RoutedEventArgs e)
+    private void CbSpineHealth_Changed(object sender, RoutedEventArgs e)
     {
         if (CbSpineHealth.IsChecked is { } enabled)
             _ = CommandDispatcher?.RunAsync("脊柱健康", manager => manager.SetSpineHealthAsync(enabled, CancellationToken.None));
     }
 
-    private async void BtnFindDevice_Click(object? s, RoutedEventArgs e)
+    private async void BtnFindDevice_Click(object sender, RoutedEventArgs e)
     {
         if (ControlManager?.ActiveManager is null)
             return;
@@ -1014,13 +1037,15 @@ public partial class HomeView : PageView
         CheckBox checkBox,
         IReadOnlyDictionary<string, bool> states,
         string featureName,
-        EventHandler<RoutedEventArgs> handler)
+        RoutedEventHandler handler)
     {
         if (states.TryGetValue(featureName, out var enabled))
         {
-            checkBox.IsCheckedChanged -= handler;
+            checkBox.Checked -= handler;
+            checkBox.Unchecked -= handler;
             checkBox.IsChecked = enabled;
-            checkBox.IsCheckedChanged += handler;
+            checkBox.Checked += handler;
+            checkBox.Unchecked += handler;
         }
     }
 

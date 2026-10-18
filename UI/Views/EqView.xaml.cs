@@ -1,16 +1,20 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using Avalonia.Layout;
-using Avalonia.Media;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using OppoPodsManager.Assets.Localization;
 using OppoPodsManager.Control.Brands.Oppo.Models;
 using OppoPodsManager.Control.Core.Models;
 using EqPresetItem = OppoPodsManager.EqPresetItem;
+
+using OppoPodsManager.Assets.UserSettings;
+using OppoPodsManager.Control.Abstractions;
+using OppoPodsManager.Control.Subsystems.Desktop;
+using OppoPodsManager.Control.Subsystems.Logging;
 
 namespace OppoPodsManager.UI.Views;
 
@@ -19,8 +23,31 @@ namespace OppoPodsManager.UI.Views;
 /// 与 DeviceInfo 页的快捷下拉框 CbEq 解耦——CbEq 由 DeviceInfoView 从快照驱动，
 /// 本视图仅根据 <see cref="ApplySnapshot"/> 提供的快照渲染自身控件。
 /// </summary>
-public partial class EqView : PageView
+public partial class EqView : UserControl, IPageView
 {
+    public IViewHost? Host { get; set; }
+    private ControlManager? ControlManager;
+    private SettingsStore UiSettings = null!;
+    private ApplicationLog? Log;
+    private CommandDispatcher? CommandDispatcher;
+    private FrontendState? FrontendState;
+    private DesktopLinkService? DesktopLinks;
+
+    public void Attach(
+        ControlManager? controlManager,
+        SettingsStore uiSettings,
+        ApplicationLog? log,
+        CommandDispatcher? commandDispatcher,
+        FrontendState? frontendState,
+        DesktopLinkService? desktopLinks)
+    {
+        ControlManager = controlManager;
+        UiSettings = uiSettings;
+        Log = log;
+        CommandDispatcher = commandDispatcher;
+        FrontendState = frontendState;
+        DesktopLinks = desktopLinks;
+    }
     // ---- EQ 调节 ----
     private string _eqCurrentPreset = "";
     private int _eqCurrentId; // 当前编辑的设备端预设 eqId，0=新建
@@ -46,17 +73,17 @@ public partial class EqView : PageView
     public EqView()
     {
         InitializeComponent();
-        EqSlider62.PropertyChanged += EqSlider_Changed;
-        EqSlider250.PropertyChanged += EqSlider_Changed;
-        EqSlider1k.PropertyChanged += EqSlider_Changed;
-        EqSlider4k.PropertyChanged += EqSlider_Changed;
-        EqSlider8k.PropertyChanged += EqSlider_Changed;
-        EqSlider16k.PropertyChanged += EqSlider_Changed;
+        EqSlider62.ValueChanged += EqSlider_ValueChanged;
+        EqSlider250.ValueChanged += EqSlider_ValueChanged;
+        EqSlider1k.ValueChanged += EqSlider_ValueChanged;
+        EqSlider4k.ValueChanged += EqSlider_ValueChanged;
+        EqSlider8k.ValueChanged += EqSlider_ValueChanged;
+        EqSlider16k.ValueChanged += EqSlider_ValueChanged;
         LbEqBuiltinPresets.SelectionChanged += EqBuiltinPresets_Changed;
         LbEqCustomPresets.SelectionChanged += EqCustomPresets_Changed;
     }
 
-    public override void ApplySnapshot(BusinessSnapshot snapshot)
+    public void ApplySnapshot(BusinessSnapshot snapshot)
     {
         if (_nextEqEditing)
             return;
@@ -80,9 +107,9 @@ public partial class EqView : PageView
 
             if (!snapshot.IsConnected || manager is null)
             {
-                BtnEqNew.IsVisible = false;
-                EqCustomPresetPanel.IsVisible = false;
-                EqSliderCard.IsVisible = false;
+                BtnEqNew.Visibility = Visibility.Collapsed;
+                EqCustomPresetPanel.Visibility = Visibility.Collapsed;
+                EqSliderCard.Visibility = Visibility.Collapsed;
                 BtnEqSave.IsEnabled = false;
                 _eqCurrentPreset = string.Empty;
                 _eqCurrentId = 0;
@@ -105,8 +132,8 @@ public partial class EqView : PageView
             // 新建入口仅在型号能力明确支持自定义 EQ 时显示。
             var presentation = manager.Presentation;
             var supportsCustomEq = presentation.SupportsCustomEqualizer;
-            BtnEqNew.IsVisible = supportsCustomEq;
-            EqCustomPresetPanel.IsVisible = supportsCustomEq;
+            BtnEqNew.Visibility = supportsCustomEq ? Visibility.Visible : Visibility.Collapsed;
+            EqCustomPresetPanel.Visibility = supportsCustomEq ? Visibility.Visible : Visibility.Collapsed;
             ConfigureNextEqBands(
                 presentation.CustomEqFrequencies,
                 presentation.CustomEqMinimumGain,
@@ -154,7 +181,7 @@ public partial class EqView : PageView
                 LbEqCustomPresets.SelectedItem = LbEqCustomPresets.Items
                     .OfType<EqPresetItem>()
                     .FirstOrDefault(item => item.Name == selectedName);
-                EqSliderCard.IsVisible = true;
+                EqSliderCard.Visibility = Visibility.Visible;
                 BtnEqSave.IsEnabled = true;
                 _synchronizingNextEq = true;
                 try
@@ -171,7 +198,7 @@ public partial class EqView : PageView
                 LbEqBuiltinPresets.SelectedItem = LbEqBuiltinPresets.Items
                     .OfType<EqPresetItem>()
                     .FirstOrDefault(item => item.Name == selectedName);
-                EqSliderCard.IsVisible = false;
+                EqSliderCard.Visibility = Visibility.Collapsed;
                 BtnEqSave.IsEnabled = false;
                 ConfigureNextEqBands(
                     [],
@@ -213,18 +240,24 @@ public partial class EqView : PageView
         return sb.ToString();
     }
 
-    internal void StopDebounceTimer() => _eqDebounceTimer?.Stop();
+    internal void StopDebounceTimer()
+    {
+        _eqDebounceTimer?.Stop();
+        _eqInteractionTimer?.Stop();
+        _eqUserInteracting = false;
+    }
 
     private DispatcherTimer EnsureEqDebounceTimer()
     {
         if (_eqDebounceTimer != null)
             return _eqDebounceTimer;
 
-        _eqDebounceTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(150), DispatcherPriority.Background, (_, _) =>
+        _eqDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+        _eqDebounceTimer.Tick += (_, _) =>
         {
             _eqDebounceTimer?.Stop();
             SendCurrentCustomEq();
-        });
+        };
         return _eqDebounceTimer;
     }
 
@@ -233,21 +266,18 @@ public partial class EqView : PageView
         if (_eqInteractionTimer != null)
             return _eqInteractionTimer;
 
-        _eqInteractionTimer = new DispatcherTimer(
-            TimeSpan.FromMilliseconds(300),
-            DispatcherPriority.Background,
-            (_, _) =>
-            {
-                _eqInteractionTimer?.Stop();
-                _eqUserInteracting = false;
-            });
+        _eqInteractionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+        _eqInteractionTimer.Tick += (_, _) =>
+        {
+            _eqInteractionTimer?.Stop();
+            _eqUserInteracting = false;
+        };
         return _eqInteractionTimer;
     }
 
-    private void EqSlider_Changed(object? s, AvaloniaPropertyChangedEventArgs e)
+    private void EqSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
     {
-        if (e.Property != Slider.ValueProperty) return;
-        if (s is not Slider slider) return;
+        if (sender is not Slider slider) return;
 
         var db = (int)Math.Round(slider.Value);
         var sign = db > 0 ? "+" : "";
@@ -280,7 +310,8 @@ public partial class EqView : PageView
         timer.Stop();
         timer.Start();
     }
-    private void EqBuiltinPresets_Changed(object? s, SelectionChangedEventArgs e)
+
+    private void EqBuiltinPresets_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_eqSuppressListEvent) return;
         if (LbEqBuiltinPresets.SelectedItem is not EqPresetItem item) return;
@@ -292,7 +323,8 @@ public partial class EqView : PageView
 
         ApplyEqSelection(item);
     }
-    private void EqCustomPresets_Changed(object? s, SelectionChangedEventArgs e)
+
+    private void EqCustomPresets_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_eqSuppressListEvent) return;
         if (LbEqCustomPresets.SelectedItem is not EqPresetItem item) return;
@@ -304,6 +336,7 @@ public partial class EqView : PageView
 
         ApplyEqSelection(item);
     }
+
     private void ApplyEqSelection(EqPresetItem item, bool sendToDevice = true)
     {
         _eqCurrentPreset = item.Name;
@@ -316,13 +349,13 @@ public partial class EqView : PageView
         // 内置预设：直接生效，不显示滑块
         if (!item.IsCustom && !item.IsDeviceEntry)
         {
-            EqSliderCard.IsVisible = false;
+            EqSliderCard.Visibility = Visibility.Collapsed;
             EqHintText.Text = string.Format(LanguageManager.Instance.GetString(LanguageManager.Instance.Eq_HintSwitched), item.Name);
             return;
         }
 
         // 自定义/设备端预设：显示滑块编辑
-        EqSliderCard.IsVisible = true;
+        EqSliderCard.Visibility = Visibility.Visible;
         // 尝试加载设备保存的增益值
         var entry = FrontendState?.Snapshot.EqualizerEntries.FirstOrDefault(d => d.Name == item.Name);
         if (entry is { Gains.Count: > 0, Frequencies.Count: > 0 })
@@ -334,6 +367,7 @@ public partial class EqView : PageView
         BtnEqSave.IsEnabled = true;
         EqHintText.Text = string.Format(LanguageManager.Instance.GetString(LanguageManager.Instance.Eq_HintEditing), item.Name);
     }
+
     private void AddCustomPresetToList(string name)
     {
         // 避免重复——已有同名项则只选中不追加
@@ -347,7 +381,7 @@ public partial class EqView : PageView
         LbEqCustomPresets.SelectedItem = newItem;
         _eqSuppressListEvent = false;
         // 显示均衡器
-        EqSliderCard.IsVisible = true;
+        EqSliderCard.Visibility = Visibility.Visible;
         BtnEqSave.IsEnabled = true;
     }
 
@@ -362,6 +396,7 @@ public partial class EqView : PageView
         foreach (var band in _dynamicEqBands)
             band.Slider.Value = Math.Clamp(value, band.Slider.Minimum, band.Slider.Maximum);
     }
+
     private void ApplyNextEqEntry(EqualizerEntrySnapshot entry)
     {
         var manager = ControlManager?.ActiveManager;
@@ -378,6 +413,7 @@ public partial class EqView : PageView
         var gains = manager.AlignCustomEqualizerGains(entry);
         ConfigureNextEqBands(frequencies, _nextEqMinimumGain, _nextEqMaximumGain, gains);
     }
+
     private void ConfigureFixedEqSliders(sbyte minimumGain, sbyte maximumGain, IReadOnlyList<sbyte>? gains)
     {
         var sliders = new[] { EqSlider62, EqSlider250, EqSlider1k, EqSlider4k, EqSlider8k, EqSlider16k };
@@ -388,11 +424,13 @@ public partial class EqView : PageView
             sliders[index].Value = gains is not null && index < gains.Count ? gains[index] : 0;
         }
     }
+
     private static void UpdateEqDbLabel(Slider slider, TextBlock label)
     {
         var db = (int)Math.Round(slider.Value);
         label.Text = db > 0 ? $"+{db}" : db.ToString();
     }
+
     private static string FormatEqFrequency(ushort frequency) => frequency >= 1000 && frequency % 1000 == 0
         ? $"{frequency / 1000}k"
         : frequency.ToString();
@@ -406,6 +444,7 @@ public partial class EqView : PageView
             .Select(slider => slider.Value)
             .ToArray();
     }
+
     private void SendCurrentCustomEq()
     {
         if (_eqCurrentId <= 0 || string.IsNullOrWhiteSpace(_eqCurrentPreset))
@@ -414,7 +453,8 @@ public partial class EqView : PageView
         if (entry is not null)
             _ = CommandDispatcher?.RunAsync("EQ 预览", manager => manager.PreviewCustomEqualizerAsync(entry, CancellationToken.None));
     }
-    private void BtnEqCancel_Click(object? s, RoutedEventArgs e)
+
+    private void BtnEqCancel_Click(object sender, RoutedEventArgs e)
     {
         // 仅当前编辑自定义/设备端预设时生效
         if (string.IsNullOrEmpty(_eqCurrentPreset)) return;
@@ -422,7 +462,7 @@ public partial class EqView : PageView
         EqHintText.Text = LanguageManager.Instance.GetString(LanguageManager.Instance.Eq_HintReset);
     }
 
-    private async void BtnEqNew_Click(object? s, RoutedEventArgs e)
+    private async void BtnEqNew_Click(object sender, RoutedEventArgs e)
     {
         var manager = ControlManager?.ActiveManager;
         var presentation = manager?.Presentation;
@@ -454,7 +494,7 @@ public partial class EqView : PageView
                 nextPresentation.CustomEqMaximumGain);
         }
         SetAllEqSliders(0);
-        EqSliderCard.IsVisible = true;
+        EqSliderCard.Visibility = Visibility.Visible;
         BtnEqSave.IsEnabled = true;
         EqHintText.Text = string.Format(LanguageManager.Instance.GetString(LanguageManager.Instance.Eq_HintNewPreset), name);
         LbEqBuiltinPresets.SelectedItem = null;
@@ -464,7 +504,7 @@ public partial class EqView : PageView
         AddCustomPresetToList(name);
     }
 
-    private void BtnEqSave_Click(object? s, RoutedEventArgs e)
+    private void BtnEqSave_Click(object sender, RoutedEventArgs e)
     {
         var manager = ControlManager?.ActiveManager;
         if (manager is null
@@ -478,9 +518,9 @@ public partial class EqView : PageView
         EqHintText.Text = string.Format(LanguageManager.Instance.GetString(LanguageManager.Instance.Eq_HintSaved), _eqCurrentPreset);
     }
 
-    private async void EqListItemDelete_Click(object? s, RoutedEventArgs e)
+    private async void EqListItemDelete_Click(object sender, RoutedEventArgs e)
     {
-        if (s is not Button btn || btn.Tag is not string name) return;
+        if (sender is not Button btn || btn.Tag is not string name) return;
         if (Host is null)
             return;
         if (!await Host.ShowConfirmDialogAsync(LanguageManager.Instance.GetString(LanguageManager.Instance.Dialog_ConfirmDelete),
@@ -498,6 +538,7 @@ public partial class EqView : PageView
         }
         EqHintText.Text = string.Format(LanguageManager.Instance.GetString(LanguageManager.Instance.Eq_HintDeleted), name);
     }
+
     private async Task SaveNextEqualizerAsync(EqualizerEntrySnapshot entry)
     {
         try
@@ -509,6 +550,7 @@ public partial class EqView : PageView
             _nextEqEditing = false;
         }
     }
+
     private void ConfigureNextEqBands(
         IReadOnlyList<ushort> frequencies,
         sbyte minimumGain,
@@ -521,8 +563,8 @@ public partial class EqView : PageView
         _nextEqMaximumGain = maximumGain;
         var useFixedBands = normalizedFrequencies is [62, 250, 1000, 4000, 8000, 16000];
 
-        EqFixedBandsGrid.IsVisible = useFixedBands;
-        EqDynamicBandsGrid.IsVisible = !useFixedBands;
+        EqFixedBandsGrid.Visibility = useFixedBands ? Visibility.Visible : Visibility.Collapsed;
+        EqDynamicBandsGrid.Visibility = !useFixedBands ? Visibility.Visible : Visibility.Collapsed;
         _dynamicEqBands.Clear();
         EqDynamicBandsGrid.Children.Clear();
         EqDynamicBandsGrid.ColumnDefinitions.Clear();
@@ -534,16 +576,16 @@ public partial class EqView : PageView
             return;
         }
 
-        EqDynamicBandsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+        EqDynamicBandsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         var scale = new Grid
         {
             Height = 180,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 6, 0)
         };
-        scale.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
-        scale.RowDefinitions.Add(new RowDefinition(GridLength.Star));
-        scale.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+        scale.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        scale.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        scale.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var maximumLabel = new TextBlock { Text = $"+{maximumGain}", FontSize = 10, Opacity = 0.35, HorizontalAlignment = HorizontalAlignment.Right };
         var zeroLabel = new TextBlock { Text = "0", FontSize = 10, Opacity = 0.2, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Center };
         var minimumLabel = new TextBlock { Text = minimumGain.ToString(), FontSize = 10, Opacity = 0.35, HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Bottom };
@@ -572,11 +614,12 @@ public partial class EqView : PageView
                 Orientation = Orientation.Vertical,
                 Minimum = minimumGain,
                 Maximum = maximumGain,
+                StepFrequency = 1,
                 TickFrequency = 1,
-                IsSnapToTickEnabled = true,
+                SnapsTo = SliderSnapsTo.StepValues,
                 Value = gains is not null && index < gains.Count ? gains[index] : 0
             };
-            slider.PropertyChanged += EqSlider_Changed;
+            slider.ValueChanged += EqSlider_ValueChanged;
             var frequencyLabel = new TextBlock
             {
                 Text = FormatEqFrequency(frequency),
@@ -593,7 +636,7 @@ public partial class EqView : PageView
             panel.Children.Add(dbLabel);
             panel.Children.Add(slider);
             panel.Children.Add(frequencyLabel);
-            EqDynamicBandsGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
+            EqDynamicBandsGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             Grid.SetColumn(panel, index + 1);
             EqDynamicBandsGrid.Children.Add(panel);
             _dynamicEqBands.Add(new DynamicEqBand(frequency, slider, dbLabel));

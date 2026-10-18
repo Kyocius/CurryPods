@@ -2,13 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using OppoPodsManager.Assets.Localization;
-using OppoPodsManager.Assets.VisualAssets;
 
 namespace OppoPodsManager.UI.Views;
 
@@ -17,9 +14,16 @@ namespace OppoPodsManager.UI.Views;
 /// 背景（缩略图/模糊）、自定义耳机图案、设备名、高级渲染/Acrylic。
 /// 页面本地持有控件与事件；主题应用、语言切换、窗口背景、卡片透明度、标题、
 /// 高级渲染/Acrylic 等外壳级效果通过 <see cref="Host"/> 回退到 MainWindow。
-/// </summary>
-public partial class PersonalView : PageView
+public partial class PersonalView : UserControl, IPageView
 {
+    public IViewHost? Host { get; set; }
+    private ControlManager? ControlManager;
+    private SettingsStore UiSettings = null!;
+    private ApplicationLog? Log;
+    private CommandDispatcher? CommandDispatcher;
+    private FrontendState? FrontendState;
+    private DesktopLinkService? DesktopLinks;
+
     private bool _initializing;
     private bool _refreshingComboBoxes;
     private readonly ObservableCollection<LanguageOption> _languageList = new();
@@ -40,24 +44,31 @@ public partial class PersonalView : PageView
         };
         BtnResetOpacity.Click += (_, _) => SlOpacity.Value = 50;
         CbToastDuration.SelectionChanged += CbToastDuration_Changed;
-        CbLowBatteryToast.IsCheckedChanged += (_, _) =>
+
+        RoutedEventHandler onLowBatteryChanged = (_, _) =>
         {
             if (_initializing) return;
             var on = CbLowBatteryToast.IsChecked == true;
             UiSettings.SetBool("LowBatteryToast", on);
             Log?.Debug("UI", $"设置: 低电量提醒 -> {on}");
         };
-        CbConnectionToast.IsCheckedChanged += (_, _) =>
+        CbLowBatteryToast.Checked += onLowBatteryChanged;
+        CbLowBatteryToast.Unchecked += onLowBatteryChanged;
+
+        RoutedEventHandler onConnectionToastChanged = (_, _) =>
         {
             if (_initializing) return;
             var on = CbConnectionToast.IsChecked == true;
             UiSettings.SetBool("ConnectionToast", on);
             Log?.Debug("UI", $"设置: 连接弹窗 -> {on}");
         };
+        CbConnectionToast.Checked += onConnectionToastChanged;
+        CbConnectionToast.Unchecked += onConnectionToastChanged;
+
         BtnBgLeft.Click += BtnBgLeft_Click;
         BtnBgRight.Click += BtnBgRight_Click;
         BgThumbDefault.PointerPressed += (_, _) => Host?.SelectBackground("default");
-        BgThumbAdd.PointerPressed += (_, _) => Host?.AddBackgroundImage();
+        BgThumbAdd.Click += (_, _) => Host?.AddBackgroundImage();
         SlBgBlur.ValueChanged += (_, _) =>
         {
             var v = (int)SlBgBlur.Value;
@@ -67,23 +78,29 @@ public partial class PersonalView : PageView
         };
         BtnResetBgBlur.Click += (_, _) => SlBgBlur.Value = 0;
         TbCustomName.TextChanged += TbCustomName_Changed;
-        CbAdvancedRender.IsCheckedChanged += (_, _) =>
+
+        RoutedEventHandler onAdvancedRenderChanged = (_, _) =>
         {
             var on = CbAdvancedRender.IsChecked == true;
             UiSettings.SetBool("AdvancedRender", on);
             Log?.Debug("UI", $"设置: 高级渲染 -> {on}");
             Host?.SetAdvancedRender(on);
         };
-        CbAcrylicBlur.IsCheckedChanged += (_, _) =>
+        CbAdvancedRender.Checked += onAdvancedRenderChanged;
+        CbAdvancedRender.Unchecked += onAdvancedRenderChanged;
+
+        RoutedEventHandler onAcrylicBlurChanged = (_, _) =>
         {
             // 启动期 Attach() 会显式调用 SetAcrylicBlurSilent（静默，不弹提示）；
             // 此处仅响应**用户手动拨动开关**的操作。
             if (_initializing) return;
             Host?.SetAcrylicBlur(CbAcrylicBlur.IsChecked == true);
         };
+        CbAcrylicBlur.Checked += onAcrylicBlurChanged;
+        CbAcrylicBlur.Unchecked += onAcrylicBlurChanged;
     }
 
-    public override void Attach(
+    public void Attach(
         ControlManager? controlManager,
         SettingsStore uiSettings,
         ApplicationLog? log,
@@ -91,7 +108,12 @@ public partial class PersonalView : PageView
         FrontendState? frontendState,
         DesktopLinkService? desktopLinks)
     {
-        base.Attach(controlManager, uiSettings, log, commandDispatcher, frontendState, desktopLinks);
+        ControlManager = controlManager;
+        UiSettings = uiSettings;
+        Log = log;
+        CommandDispatcher = commandDispatcher;
+        FrontendState = frontendState;
+        DesktopLinks = desktopLinks;
         _initializing = true;
         try
         {
@@ -116,7 +138,7 @@ public partial class PersonalView : PageView
             TbBgBlur.Text = SlBgBlur.Value.ToString();
 
             CbAdvancedRender.IsChecked = UiSettings.GetBool("AdvancedRender", false);
-            // Acrylic 模糊开关（仅 Windows 支持；Linux 上无 DWM 毛玻璃，禁用该选项避免渲染异常）
+            // Acrylic 模糊开关（仅 Windows 支持）
             CbAcrylicBlur.IsChecked = OperatingSystem.IsWindows() && UiSettings.GetBool("AcrylicBlur", false);
             CbAcrylicBlur.IsEnabled = OperatingSystem.IsWindows();
             // 启动期静默应用 Acrylic：窗口已在 AdaptToPlatform 按设置应用，这里只同步背景设置可用状态，
@@ -129,13 +151,13 @@ public partial class PersonalView : PageView
         }
     }
 
-    public override void ApplySnapshot(BusinessSnapshot snapshot)
+    public void ApplySnapshot(BusinessSnapshot snapshot)
     {
         // 个性化页面无快照驱动的状态，留空。
     }
 
     // ---- 语言 ----
-    private void CbLanguage_Changed(object? s, SelectionChangedEventArgs e)
+    private void CbLanguage_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_refreshingComboBoxes || _initializing || CbLanguage.SelectedItem is not LanguageOption option)
             return;
@@ -196,7 +218,7 @@ public partial class PersonalView : PageView
     }
 
     // ---- 主题 ----
-    private void CbTheme_Changed(object? s, SelectionChangedEventArgs e)
+    private void CbTheme_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_refreshingComboBoxes) return;
         var idx = CbTheme.SelectedIndex;
@@ -213,7 +235,7 @@ public partial class PersonalView : PageView
         };
 
     // ---- Toast 时长 ----
-    private void CbToastDuration_Changed(object? s, SelectionChangedEventArgs e)
+    private void CbToastDuration_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (_refreshingComboBoxes || _initializing) return;
         UiSettings.SetInt("ToastDuration", ToastDurationSecondsFromIndex(CbToastDuration.SelectedIndex));
@@ -237,16 +259,16 @@ public partial class PersonalView : PageView
     };
 
     // ---- 背景缩略图滚动 ----
-    private void BtnBgLeft_Click(object? s, RoutedEventArgs e)
-        => BgThumbScroller.Offset = BgThumbScroller.Offset.WithX(Math.Max(0, BgThumbScroller.Offset.X - 200));
+    private void BtnBgLeft_Click(object sender, RoutedEventArgs e)
+        => BgThumbScroller.ChangeView(Math.Max(0, BgThumbScroller.HorizontalOffset - 200), null, null);
 
-    private void BtnBgRight_Click(object? s, RoutedEventArgs e)
-        => BgThumbScroller.Offset = BgThumbScroller.Offset.WithX(
-            Math.Min(BgThumbScroller.Extent.Width - BgThumbScroller.Viewport.Width,
-                     BgThumbScroller.Offset.X + 200));
+    private void BtnBgRight_Click(object sender, RoutedEventArgs e)
+        => BgThumbScroller.ChangeView(
+            Math.Min(BgThumbScroller.ExtentWidth - BgThumbScroller.ViewportWidth,
+                     BgThumbScroller.HorizontalOffset + 200), null, null);
 
     // ---- 设备名 ----
-    private void TbCustomName_Changed(object? s, TextChangedEventArgs e)
+    private void TbCustomName_Changed(object sender, TextChangedEventArgs e)
     {
         var name = string.IsNullOrWhiteSpace(TbCustomName.Text) ? null : TbCustomName.Text.Trim();
         UiSettings.SetString("CustomName", name);

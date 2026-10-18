@@ -9,7 +9,8 @@ public static class WindowsStartup
 {
 #if WINDOWS
     private const string RunKey = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-    private const string ValueName = "OppoPodsManager";
+    private const string ValueName = "CurryPods";
+    private const string LegacyValueName = "OppoPodsManager";
 
     // 同步自启动配置；开发环境没有可执行文件时只保留设置，不写入无效路径。
     public static void SetEnabled(bool enabled)
@@ -17,6 +18,7 @@ public static class WindowsStartup
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
         if (key is null)
             return;
+        key.DeleteValue(LegacyValueName, throwOnMissingValue: false);
 
         if (!enabled)
         {

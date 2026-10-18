@@ -1,49 +1,36 @@
 using System;
 using System.Collections.Generic;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace OppoPodsManager.Assets.VisualAssets;
 
 public static class AssetHelper
 {
-    private static readonly Dictionary<string, Bitmap?> SharedBitmaps = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, BitmapImage?> SharedBitmaps = new(StringComparer.OrdinalIgnoreCase);
 
-    public static WindowIcon? LoadIcon(string avaresPath)
+    public static BitmapImage? LoadBitmap(string path)
     {
         try
         {
-            var uri = new Uri(avaresPath, UriKind.Absolute);
-            using var stream = AssetLoader.Open(uri);
-            return new WindowIcon(stream);
+            if (path.StartsWith("avares://OppoPodsManager/", StringComparison.OrdinalIgnoreCase))
+            {
+                path = "ms-appx:///" + path.Substring("avares://OppoPodsManager/".Length);
+            }
+            return new BitmapImage(new Uri(path, UriKind.RelativeOrAbsolute));
         }
         catch { return null; }
     }
 
-    public static Bitmap? LoadBitmap(string avaresPath)
+    public static BitmapImage? LoadSharedBitmap(string path)
     {
-        try
-        {
-            var uri = new Uri(avaresPath, UriKind.Absolute);
-            using var stream = AssetLoader.Open(uri);
-            return new Bitmap(stream);
-        }
-        catch { return null; }
-    }
-
-    public static Bitmap? LoadSharedBitmap(string avaresPath)
-    {
-        if (SharedBitmaps.TryGetValue(avaresPath, out var cached))
+        if (SharedBitmaps.TryGetValue(path, out var cached))
             return cached;
 
-        var bitmap = LoadBitmap(avaresPath);
-        SharedBitmaps[avaresPath] = bitmap;
+        var bitmap = LoadBitmap(path);
+        SharedBitmaps[path] = bitmap;
         return bitmap;
     }
 
-    /// <summary>该位图是否为共享缓存中的嵌入资源（引用相等判断，用于安全地避免误释放）。</summary>
-    public static bool IsShared(Bitmap? bmp)
+    public static bool IsShared(BitmapImage? bmp)
         => bmp != null && SharedBitmaps.ContainsValue(bmp);
 }

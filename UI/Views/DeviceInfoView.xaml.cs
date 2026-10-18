@@ -1,23 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using System.Threading;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using OppoPodsManager.Control.Abstractions;
-using OppoPodsManager.Control.Brands.Oppo.Models;
+using Microsoft.UI.Xaml.Controls;
 using OppoPodsManager.Control.Core.Models;
-using OppoPodsManager.Assets.Localization;
+
+using OppoPodsManager.Assets.UserSettings;
+using OppoPodsManager.Control.Abstractions;
+using OppoPodsManager.Control.Subsystems.Desktop;
+using OppoPodsManager.Control.Subsystems.Logging;
 
 namespace OppoPodsManager.UI.Views;
 
-/// <summary>
-/// 设备信息页：仅保留隐藏的 EQ 快捷选择器（原 MainWindow.CbEq 逻辑迁入此处）。
-/// </summary>
-public partial class DeviceInfoView : PageView
+public sealed partial class DeviceInfoView : UserControl, IPageView
 {
-    // 快照重建时抑制 SelectionChanged 误触发下发。
+    public IViewHost? Host { get; set; }
+    private ControlManager? ControlManager;
+    private CommandDispatcher? CommandDispatcher;
     private bool _suppressEqSelection;
 
     public DeviceInfoView()
@@ -26,7 +24,19 @@ public partial class DeviceInfoView : PageView
         CbEq.SelectionChanged += CbEq_SelectionChanged;
     }
 
-    public override void ApplySnapshot(BusinessSnapshot snapshot)
+    public void Attach(
+        ControlManager? controlManager,
+        SettingsStore uiSettings,
+        ApplicationLog? log,
+        CommandDispatcher? commandDispatcher,
+        FrontendState? frontendState,
+        DesktopLinkService? desktopLinks)
+    {
+        ControlManager = controlManager;
+        CommandDispatcher = commandDispatcher;
+    }
+
+    public void ApplySnapshot(BusinessSnapshot snapshot)
     {
         var manager = ControlManager?.ActiveManager;
         _suppressEqSelection = true;
@@ -53,7 +63,7 @@ public partial class DeviceInfoView : PageView
         }
     }
 
-    private void CbEq_SelectionChanged(object? s, SelectionChangedEventArgs e)
+    private void CbEq_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_suppressEqSelection)
             return;

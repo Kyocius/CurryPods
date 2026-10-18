@@ -11,6 +11,7 @@ public sealed class WindowsBluetoothDiscovery : IDeviceDiscoveryMonitor
     private global::Windows.Devices.Enumeration.DeviceWatcher? _watcher;
     private IReadOnlyList<DeviceCandidate> _lastSnapshot = [];
     private int _refreshGeneration;
+    private int _refreshRunning;
     private long _snapshotGeneration;
     private bool _disposed;
 
@@ -18,7 +19,7 @@ public sealed class WindowsBluetoothDiscovery : IDeviceDiscoveryMonitor
 
     public async Task<IReadOnlyList<DeviceCandidate>> DiscoverAsync(CancellationToken cancellationToken)
     {
-        var devices = await Task.Run(WindowsBluetoothDiscoveryCore.ListConnected, cancellationToken);
+        var devices = await Task.Run(() => WindowsBluetoothDiscoveryCore.ListConnectedAsync(cancellationToken), cancellationToken);
         return devices
             .Where(device => device.Address != 0)
             .Select(device => new DeviceCandidate(
@@ -47,7 +48,7 @@ public sealed class WindowsBluetoothDiscovery : IDeviceDiscoveryMonitor
             _watcher.EnumerationCompleted += OnEnumerationCompleted;
             _watcher.Start();
         }
-        _ = RefreshSnapshotAsync();
+        RequestRefresh();
     }
 
     public void Dispose()
@@ -73,23 +74,43 @@ public sealed class WindowsBluetoothDiscovery : IDeviceDiscoveryMonitor
         try { watcher.Stop(); } catch { }
     }
 
-    private async void OnDeviceChanged(global::Windows.Devices.Enumeration.DeviceWatcher sender, global::Windows.Devices.Enumeration.DeviceInformation args)
-        => await RefreshSnapshotAsync();
+    private void OnDeviceChanged(global::Windows.Devices.Enumeration.DeviceWatcher sender, global::Windows.Devices.Enumeration.DeviceInformation args)
+        => RequestRefresh();
 
-    private async void OnDeviceUpdated(global::Windows.Devices.Enumeration.DeviceWatcher sender, global::Windows.Devices.Enumeration.DeviceInformationUpdate args)
-        => await RefreshSnapshotAsync();
+    private void OnDeviceUpdated(global::Windows.Devices.Enumeration.DeviceWatcher sender, global::Windows.Devices.Enumeration.DeviceInformationUpdate args)
+        => RequestRefresh();
 
-    private async void OnDeviceRemoved(global::Windows.Devices.Enumeration.DeviceWatcher sender, global::Windows.Devices.Enumeration.DeviceInformationUpdate args)
-        => await RefreshSnapshotAsync();
+    private void OnDeviceRemoved(global::Windows.Devices.Enumeration.DeviceWatcher sender, global::Windows.Devices.Enumeration.DeviceInformationUpdate args)
+        => RequestRefresh();
 
-    private async void OnEnumerationCompleted(global::Windows.Devices.Enumeration.DeviceWatcher sender, object args)
-        => await RefreshSnapshotAsync();
+    private void OnEnumerationCompleted(global::Windows.Devices.Enumeration.DeviceWatcher sender, object args)
+        => RequestRefresh();
+
+    private void RequestRefresh()
+    {
+        lock (_gate)
+        {
+            if (_disposed)
+                return;
+            Interlocked.Increment(ref _refreshGeneration);
+        }
+        _ = RefreshSnapshotAsync();
+    }
 
     private async Task RefreshSnapshotAsync()
     {
-        var generation = Interlocked.Increment(ref _refreshGeneration);
+        // DeviceWatcher can emit bursts of Updated events. Keep only one scan in
+        // flight and repeat it if a newer event arrived while it was running.
+        if (Interlocked.CompareExchange(ref _refreshRunning, 1, 0) != 0)
+            return;
+        var generation = Volatile.Read(ref _refreshGeneration);
         try
         {
+            await Task.Delay(250);
+            generation = Volatile.Read(ref _refreshGeneration);
+            lock (_gate)
+                if (_disposed)
+                    return;
             var snapshot = await DiscoverAsync(CancellationToken.None);
             if (generation != Volatile.Read(ref _refreshGeneration))
                 return;
@@ -122,6 +143,15 @@ public sealed class WindowsBluetoothDiscovery : IDeviceDiscoveryMonitor
         catch (Exception exception)
         {
             global::OppoPodsManager.Control.Subsystems.Logging.ApplicationLog.Current?.Error("Bluetooth", "Windows 蓝牙设备变化刷新失败。", exception);
+        }
+        finally
+        {
+            Volatile.Write(ref _refreshRunning, 0);
+            bool repeat;
+            lock (_gate)
+                repeat = !_disposed && generation != Volatile.Read(ref _refreshGeneration);
+            if (repeat)
+                _ = RefreshSnapshotAsync();
         }
     }
 }

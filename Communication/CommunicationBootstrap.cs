@@ -11,7 +11,7 @@ public static class CommunicationBootstrap
         var bleHub = new Windows.BleAdvertisementHub();
         return new CommunicationController(
             [new Windows.WindowsRfcommConnectionFactory(), new Windows.BleAdvertisementConnectionFactory(bleHub)],
-            [new Windows.WindowsBluetoothDiscovery(), new Windows.WindowsBleAdvertisementDiscovery(bleHub)]);
+            [new Windows.WindowsBluetoothDiscovery(), new Windows.WindowsBleAdvertisementDiscovery(bleHub, ownsHub: true)]);
 #elif LINUX
         return new CommunicationController(
             [new Linux.LinuxConnectionFactory(), new Linux.LinuxGattConnectionFactory()],

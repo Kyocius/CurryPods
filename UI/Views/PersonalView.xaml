@@ -1,0 +1,162 @@
+﻿<UserControl
+    x:Class="OppoPodsManager.UI.Views.PersonalView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:OppoPodsManager.UI.Controls"
+    xmlns:l10n="using:OppoPodsManager.Assets.Localization">
+
+  <StackPanel Spacing="14" HorizontalAlignment="Stretch" Margin="0,0,0,40">
+    <TextBlock Text="{l10n:Translate Key=Personal_Title}" FontSize="16"
+               HorizontalAlignment="Center" FontWeight="SemiBold"/>
+
+    <!-- 外观 -->
+    <Border Padding="18,16" CornerRadius="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{l10n:Translate Key=Personal_Appearance}" FontSize="14" Opacity="0.8"/>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{l10n:Translate Key=Personal_Language}" FontSize="13" VerticalAlignment="Center"/>
+          <ComboBox x:Name="CbLanguage" Height="32" Width="180" DisplayMemberPath="DisplayName" HorizontalAlignment="Left"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{l10n:Translate Key=Personal_Theme}" FontSize="13" VerticalAlignment="Center"/>
+          <ComboBox x:Name="CbTheme" Height="32" Width="140" HorizontalAlignment="Left">
+            <ComboBoxItem Content="{l10n:Translate Key=Personal_ThemeFollowSystem}"/>
+            <ComboBoxItem Content="{l10n:Translate Key=Personal_ThemeDark}"/>
+            <ComboBoxItem Content="{l10n:Translate Key=Personal_ThemeLight}"/>
+          </ComboBox>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{l10n:Translate Key=Personal_CardOpacity}" FontSize="13" VerticalAlignment="Center"/>
+          <Slider x:Name="SlOpacity" Minimum="0" Maximum="90" Value="50" Width="160"
+                  StepFrequency="10" TickFrequency="10" SnapsTo="StepValues"/>
+          <TextBlock x:Name="TbOpacity" Text="50%" FontSize="12" VerticalAlignment="Center"
+                     Opacity="0.5" Width="32"/>
+          <Button x:Name="BtnResetOpacity" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
+            <FontIcon Glyph="&#xE72C;" FontSize="13"/>
+          </Button>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- 弹窗设置 -->
+    <Border Padding="18,16" CornerRadius="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{l10n:Translate Key=Personal_ToastSettings}" FontSize="14" Opacity="0.8"/>
+        <CheckBox x:Name="CbLowBatteryToast" Content="{l10n:Translate Key=Personal_LowBatteryToast}" Margin="0,2,0,0"/>
+        <CheckBox x:Name="CbConnectionToast" Content="{l10n:Translate Key=Personal_ConnectionToast}" Margin="0,2,0,0"/>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{l10n:Translate Key=Personal_ToastDuration}" FontSize="13" VerticalAlignment="Center"/>
+          <ComboBox x:Name="CbToastDuration" Height="32" Width="140" HorizontalAlignment="Left">
+            <ComboBoxItem Content="3s"/>
+            <ComboBoxItem Content="4s"/>
+            <ComboBoxItem Content="{l10n:Translate Key=Personal_ToastDurationDefault}"/>
+            <ComboBoxItem Content="6s"/>
+            <ComboBoxItem Content="7s"/>
+            <ComboBoxItem Content="8s"/>
+          </ComboBox>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- 背景 -->
+    <Border x:Name="BackgroundSettingsCard" Padding="18,16" HorizontalAlignment="Stretch"
+            CornerRadius="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel x:Name="BackgroundSettingsContent" x:FieldModifier="public" Spacing="12">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="{l10n:Translate Key=Personal_Background}" FontSize="14"
+                     VerticalAlignment="Center" Opacity="0.8"/>
+          <Button Grid.Column="1" x:Name="BgThumbAdd" Height="32" Padding="12,0"
+                  Content="{l10n:Translate Key=Personal_AddNewBackground}"/>
+        </Grid>
+        <Grid ColumnDefinitions="28,*,28">
+          <Button Grid.Column="0" x:Name="BtnBgLeft" Content="&#x2039;" FontSize="19"
+                  Width="28" Height="60" Padding="0" VerticalAlignment="Center"
+                  Background="Transparent" BorderThickness="0" Opacity="0.45"
+                  Click="BtnBgLeft_Click"/>
+          <Border Grid.Column="1" HorizontalAlignment="Stretch">
+            <ScrollViewer x:Name="BgThumbScroller" x:FieldModifier="public" HorizontalAlignment="Stretch"
+                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
+                          HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
+              <StackPanel x:Name="BgThumbList" x:FieldModifier="public" Orientation="Horizontal" Spacing="10">
+                <Border x:Name="BgThumbDefault" x:FieldModifier="public" Width="90" Height="60" CornerRadius="8">
+                  <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                      <GradientStop Color="White" Offset="0"/>
+                      <GradientStop Color="White" Offset="0.45"/>
+                      <GradientStop Color="#222222" Offset="0.45"/>
+                      <GradientStop Color="#222222" Offset="1"/>
+                    </LinearGradientBrush>
+                  </Border.Background>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+          </Border>
+          <Button Grid.Column="2" x:Name="BtnBgRight" Content="&#x203A;" FontSize="19"
+                  Width="28" Height="60" Padding="0" VerticalAlignment="Center"
+                  Background="Transparent" BorderThickness="0" Opacity="0.45"
+                  Click="BtnBgRight_Click"/>
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <TextBlock Text="{l10n:Translate Key=Personal_BackgroundBlur}" FontSize="13" VerticalAlignment="Center"/>
+          <Slider x:Name="SlBgBlur" Minimum="0" Maximum="20" Value="0" Width="160"
+                  StepFrequency="5" TickFrequency="5" SnapsTo="StepValues"/>
+          <TextBlock x:Name="TbBgBlur" Text="0" FontSize="12" VerticalAlignment="Center"
+                     Opacity="0.5" Width="32"/>
+          <Button x:Name="BtnResetBgBlur" Content="{l10n:Translate Key=Personal_Reset}" Height="32" FontSize="13" Padding="12,0"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- 自定义耳机图案 -->
+    <Border Padding="18,16" HorizontalAlignment="Stretch" CornerRadius="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{l10n:Translate Key=Personal_CustomEarphone}" FontSize="14" Opacity="0.8"/>
+        <controls:WrapPanel x:Name="EarphoneCustomContent" x:FieldModifier="public" Orientation="Horizontal"/>
+      </StackPanel>
+    </Border>
+
+    <!-- 设备 -->
+    <Border Padding="18,16" CornerRadius="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel Spacing="10">
+        <TextBlock Text="{l10n:Translate Key=Personal_Device}" FontSize="14" Opacity="0.8"/>
+        <TextBlock Text="{l10n:Translate Key=Personal_CustomDeviceName}" FontSize="13" Opacity="0.6"/>
+        <TextBox x:Name="TbCustomName" Height="32" Padding="8,4" HorizontalContentAlignment="Center"/>
+      </StackPanel>
+    </Border>
+
+    <!-- 高级自定义设置 (Beta) -->
+    <Border Padding="18,16" HorizontalAlignment="Stretch" CornerRadius="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+      <StackPanel Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="{l10n:Translate Key=Personal_AdvancedSettings}" FontSize="14" Opacity="0.8" VerticalAlignment="Center"/>
+          <Border Padding="6,1" CornerRadius="4" Background="#4488FF">
+            <TextBlock Text="{l10n:Translate Key=Personal_Beta}" FontSize="10" Foreground="White"/>
+          </Border>
+        </StackPanel>
+        <CheckBox x:Name="CbAdvancedRender" Content="{l10n:Translate Key=Personal_AdvancedRenderDesc}" Margin="0,2,0,0"/>
+        <CheckBox x:Name="CbAcrylicBlur" x:FieldModifier="public" Content="{l10n:Translate Key=Personal_AcrylicBlurDesc}" Margin="0,6,0,0"/>
+        <TextBlock Text="{l10n:Translate Key=Personal_LinuxBlurNote}" FontSize="11" Opacity="0.45" Margin="0,2,0,0"/>
+        <TextBlock Text="{l10n:Translate Key=Personal_AcrylicTip}" FontSize="11" Opacity="0.35" Margin="0,2,0,0"/>
+      </StackPanel>
+    </Border>
+    <Border Height="24" Background="Transparent"/>
+  </StackPanel>
+</UserControl>

@@ -1,79 +1,59 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <!-- Windows 后端由 RID 或构建参数决定；Linux 保持纯 net10.0。 -->
-    <EnableWindowsBackend Condition="'$(EnableWindowsBackend)' == '' and $(RuntimeIdentifier.StartsWith('win'))">true</EnableWindowsBackend>
-    <EnableWindowsBackend Condition="'$(EnableWindowsBackend)' == '' and '$(RuntimeIdentifier)' == '' and $([MSBuild]::IsOSPlatform('Windows'))">true</EnableWindowsBackend>
-    <EnableWindowsBackend Condition="'$(EnableWindowsBackend)' == ''">false</EnableWindowsBackend>
-  </PropertyGroup>
-
-  <!-- 调试模式启用 apphost，使 bin 下生成 OppoPodsManager.exe（而非仅 dll），
-       VS Code 调试时进程名即为 OppoPodsManager，而不是 dotnet。 -->
-  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
-    <UseAppHost>true</UseAppHost>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <AssemblyName>OppoPodsManager</AssemblyName>
-    <!-- next 分支内测版：版本号刻意高于正式版（当前 1.1.10），使更新检查永远判定为已最新、不弹更新提示。 -->
+    <AssemblyName>CurryPods</AssemblyName>
+    <Product>CurryPods</Product>
+    <Title>CurryPods</Title>
     <Version>2.0.0</Version>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>OppoPodsManager</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\VisualAssets\tuopan.ico</ApplicationIcon>
-    <TargetFramework Condition="'$(EnableWindowsBackend)' == 'true'">net10.0-windows10.0.19041.0</TargetFramework>
-    <TargetFramework Condition="'$(EnableWindowsBackend)' != 'true'">net10.0</TargetFramework>
-    <RuntimeIdentifiers>win-x64;win-arm64;linux-x64</RuntimeIdentifiers>
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+    <PublishProfile Condition="Exists('Properties\PublishProfiles\win-$(Platform).pubxml')">win-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <WinUISDKReferences>false</WinUISDKReferences>
+    <EnableMsixTooling>true</EnableMsixTooling>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>OppoPodsManager</RootNamespace>
-    <IsAotCompatible>true</IsAotCompatible>
-    <IlcOptimizationPreference>Size</IlcOptimizationPreference>
-    <SupportedOSPlatformVersion Condition="'$(EnableWindowsBackend)' == 'true'">10.0.19041.0</SupportedOSPlatformVersion>
+    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <NoWarn>CA1416;IL2104;IL3053</NoWarn>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <PublishAot>true</PublishAot>
-    <SelfContained>true</SelfContained>
-    <StripSymbols>true</StripSymbols>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <DebuggerSupport>false</DebuggerSupport>
-  </PropertyGroup>
-
-  <!-- Linux 传输使用 BlueZ D-Bus；Windows 专属文件不参与 Linux 编译。 -->
-  <PropertyGroup Condition="'$(EnableWindowsBackend)' != 'true'">
-    <DefineConstants>$(DefineConstants);LINUX</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(EnableWindowsBackend)' == 'true'">
-    <DefineConstants>$(DefineConstants);WINDOWS</DefineConstants>
-  </PropertyGroup>
-
-  <ItemGroup Condition="'$(EnableWindowsBackend)' != 'true'">
-    <PackageReference Include="Tmds.DBus" Version="0.94.2" />
-    <!-- 裁剪保护：Tmds.DBus 用反射动态生成 D-Bus 代理（IGattCharacteristic1 等），
-         不标记为 root 会被 IL 裁切器删掉代理生成路径，导致 Linux GATT 链路运行期失效。 -->
-    <TrimmerRootAssembly Include="Tmds.DBus" />
-    <Compile Remove="Communication\Transport\Windows\**\*.cs" />
-    <Compile Remove="Communication\Windows\**\*.cs" />
+  <!-- Single-project MSIX Packaging Capability -->
+  <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix"/>
   </ItemGroup>
-  <ItemGroup Condition="'$(EnableWindowsBackend)' == 'true'">
+
+  <!-- Windows Bluetooth only, remove Linux communication files -->
+  <ItemGroup>
     <Compile Remove="Communication\Transport\Linux\**\*.cs" />
     <Compile Remove="Communication\Linux\**\*.cs" />
   </ItemGroup>
 
+  <!-- Windows App SDK & Dependencies -->
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.5" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.0.5" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.5" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.5" />
-    <PackageReference Include="SukiUI" Version="7.0.1" />
-    <!-- 裁剪保护：SukiUI 含主题/样式反射与动态资源解析，是深浅色模式读取的核心依赖，
-         不标记为 root 可能被裁切器误删导致主题系统运行期异常。 -->
-    <TrimmerRootAssembly Include="SukiUI" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="*" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="*" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools.WinApp" Version="*" />
+    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.4.1" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
   </ItemGroup>
 
+  <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <!-- Assets and Resources -->
   <ItemGroup>
-    <None Remove="Assets\Localization\Strings*.json" />
-    <AvaloniaResource Include="Assets\VisualAssets\**\*" />
-    <AvaloniaResource Include="Assets\Oplus\Images\*.png" />
+    <Manifest Include="$(ApplicationManifest)" />
+    <Content Include="Assets\**\*" Exclude="Assets\**\*.cs;Assets\Localization\Strings*.json;Assets\*\Data\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <EmbeddedResource Include="Assets\Oplus\Data\DeviceModels.json" LogicalName="OppoPodsManager.Assets.Oplus.Data.DeviceModels.json" />
     <EmbeddedResource Include="Assets\Oplus\Data\EqModeNames.json" LogicalName="OppoPodsManager.Assets.Oplus.Data.EqModeNames.json" />
     <EmbeddedResource Include="Assets\Oplus\Data\EqModeNames.en.json" LogicalName="OppoPodsManager.Assets.Oplus.Data.EqModeNames.en.json" WithCulture="false" />

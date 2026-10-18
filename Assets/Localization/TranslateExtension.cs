@@ -1,31 +1,40 @@
-using Avalonia;
-using Avalonia.Markup.Xaml;
-using System.Reflection;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Markup;
 
 namespace OppoPodsManager.Assets.Localization;
 
-// 为 AXAML 提供基于资源键的本地化标记扩展。
-public sealed class TranslateExtension : MarkupExtension
+// 为 XAML 提供基于资源键的本地化标记扩展。
+[MarkupExtensionReturnType(ReturnType = typeof(string))]
+public class Translate : MarkupExtension
 {
-    public TranslateExtension()
+    public Translate()
     {
     }
 
-    public TranslateExtension(string key)
+    public Translate(string key)
     {
         Key = key;
     }
 
     public string Key { get; set; } = string.Empty;
 
-    // 将 AXAML 内的资源键解析为当前语言文案，并登记目标属性以便语言切换时刷新。
-    public override object ProvideValue(IServiceProvider serviceProvider)
+    protected override object ProvideValue()
+    {
+        return TranslationCatalog.Get(Key);
+    }
+
+    protected override object ProvideValue(IXamlServiceProvider serviceProvider)
     {
         var value = TranslationCatalog.Get(Key);
-        if (serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget target
-            && target.TargetObject is AvaloniaObject targetObject
-            && target.TargetProperty is AvaloniaProperty targetProperty)
+        if (serviceProvider?.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget target
+            && target.TargetObject is DependencyObject targetObject
+            && target.TargetProperty is DependencyProperty targetProperty)
         {
             TranslationCatalog.Register(targetObject, targetProperty, Key);
         }
@@ -34,22 +43,32 @@ public sealed class TranslateExtension : MarkupExtension
     }
 }
 
+public sealed class TranslateExtension : Translate
+{
+    public TranslateExtension()
+    {
+    }
+
+    public TranslateExtension(string key) : base(key)
+    {
+    }
+}
+
+
+
 internal static class TranslationCatalog
 {
     private static readonly object RegistrationGate = new();
     private static readonly List<TranslationTarget> Targets = new();
 
-    // 缓存默认语言的文案，供 AXAML 在加载时同步查询。
     private static IReadOnlyDictionary<string, string> _values = LoadValues("zh");
     private static string _language = "zh";
 
-    // 通知响应式文案对象和界面资源目标刷新当前语言。
     public static event Action? LanguageChanged;
 
     public static string CurrentLanguage => Volatile.Read(ref _language);
 
-    // 登记 AXAML 本地化目标，弱引用保证窗口销毁后不会被语言目录保留。
-    public static void Register(AvaloniaObject targetObject, AvaloniaProperty targetProperty, string key)
+    public static void Register(DependencyObject targetObject, DependencyProperty targetProperty, string key)
     {
         lock (RegistrationGate)
         {
@@ -58,14 +77,12 @@ internal static class TranslationCatalog
         }
     }
 
-    // 找不到文案时回退显示资源键，保证窗口仍能加载。
     public static string Get(string key)
     {
         var values = Volatile.Read(ref _values);
         return values.TryGetValue(key, out var value) ? value : key.Replace('_', ' ');
     }
 
-    // 在启动阶段选择嵌入语言包，并把系统文化码转换成资源文件使用的短代码。
     public static void SetLanguage(string language)
     {
         var catalogLanguage = NormalizeLanguage(language);
@@ -75,7 +92,6 @@ internal static class TranslationCatalog
         LanguageChanged?.Invoke();
     }
 
-    // 在 UI 线程重新写入所有已登记的 AXAML 属性，使语言切换立即反映到界面。
     private static void RefreshTargets()
     {
         TranslationTarget[] targets;
@@ -90,32 +106,33 @@ internal static class TranslationCatalog
             if (!target.Object.TryGetTarget(out var targetObject))
                 continue;
 
-            try
+            targetObject.DispatcherQueue?.TryEnqueue(() =>
             {
-                targetObject.SetValue(target.Property, Get(target.Key));
-            }
-            catch (InvalidOperationException)
-            {
-                // 目标控件已进入模板销毁流程时，忽略这一次刷新。
-            }
+                try
+                {
+                    targetObject.SetValue(target.Property, Get(target.Key));
+                }
+                catch (Exception)
+                {
+                }
+            });
         }
     }
 
     private sealed class TranslationTarget
     {
-        public TranslationTarget(AvaloniaObject targetObject, AvaloniaProperty property, string key)
+        public TranslationTarget(DependencyObject targetObject, DependencyProperty property, string key)
         {
-            Object = new WeakReference<AvaloniaObject>(targetObject);
+            Object = new WeakReference<DependencyObject>(targetObject);
             Property = property;
             Key = key;
         }
 
-        public WeakReference<AvaloniaObject> Object { get; }
-        public AvaloniaProperty Property { get; }
+        public WeakReference<DependencyObject> Object { get; }
+        public DependencyProperty Property { get; }
         public string Key { get; }
     }
 
-    // 将设置文件中的文化码统一映射到实际嵌入资源名称。
     private static string NormalizeLanguage(string? language)
     {
         if (string.IsNullOrWhiteSpace(language))
@@ -132,7 +149,6 @@ internal static class TranslationCatalog
 
     private static IReadOnlyDictionary<string, string> LoadValues(string language)
     {
-        // 从嵌入资源读取字典，保证 AOT 发布后不依赖外部文件路径。
         var resourceName = language switch
         {
             "en" => "OppoPodsManager.Assets.Localization.Strings.en.json",

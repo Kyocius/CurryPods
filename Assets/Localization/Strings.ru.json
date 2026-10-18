@@ -1,4 +1,4 @@
-﻿{
+{
   "Sidebar_MultiDevice": "Список устройств",
   "Sidebar_ConnectionStrategy": "Стратегия подключения",
   "Sidebar_PriorityDevice": "Приоритетное устройство",
@@ -148,7 +148,7 @@
   "Dialog_AcrylicEnabledMsg": "Возвращён стандартный фон. Пользовательские фоны будут недоступны.",
   "Dialog_AcrylicDisabled": "Размытие Acrylic выключено",
   "Dialog_AcrylicDisabledMsg": "Пользовательские фоны восстановлены.",
-  "Toast_ConnectedTitle": "OPPO Pods",
+  "Toast_ConnectedTitle": "CurryPods",
   "Toast_LeftLabel": "Левый",
   "Toast_RightLabel": "Правый",
   "Toast_CaseLabel": "Футляр",
@@ -157,7 +157,7 @@
   "Toast_CriticalBattery": "Критически низкий заряд",
   "Toast_CriticalBatteryHint": "Немедленно зарядите",
   "Toast_Disconnected": "Соединение разорвано",
-  "Tray_Tooltip": "OPPO Pods · Один клик — мини-окно / Двойной клик — главное окно",
+  "Tray_Tooltip": "CurryPods · Один клик — мини-окно / Двойной клик — главное окно",
   "Tray_ShowMini": "Показать мини-окно",
   "Tray_ShowMain": "Показать главное окно",
   "Tray_Quit": "Выход",
@@ -292,7 +292,7 @@
   "Personal_EarphonePickTitle": "Выбор изображения наушников",
   "Battery_Unavailable": "-",
   "Common_Unavailable": "-",
-  "Common_AppDeviceName": "OPPO Pods",
+  "Common_AppDeviceName": "CurryPods",
   "Eq_CustomNewName": "Пользовательский EQ {0}",
   "Eq_CustomDefaultName": "Пользовательский EQ",
   "MultiDevice_Unnamed": "Устройство {0}",

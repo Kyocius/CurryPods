@@ -67,7 +67,7 @@ public sealed class BleAdvertisementHub : IDisposable
 
     private void OnReceived(BluetoothLEAdvertisementWatcher sender, BluetoothLEAdvertisementReceivedEventArgs args)
     {
-        if (args.Advertisement is null)
+        if (_disposed || args.Advertisement is null)
             return;
 
         BluetoothLEManufacturerData? manufacturer = null;
@@ -96,7 +96,7 @@ public sealed class BleAdvertisementHub : IDisposable
     {
         if (buffer is null || buffer.Length == 0)
             return [];
-        var reader = DataReader.FromBuffer(buffer);
+        using var reader = DataReader.FromBuffer(buffer);
         var bytes = new byte[reader.UnconsumedBufferLength];
         reader.ReadBytes(bytes);
         return bytes;

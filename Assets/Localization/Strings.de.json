@@ -1,4 +1,4 @@
-﻿{
+{
   "Sidebar_MultiDevice": "Geräteliste",
   "Sidebar_ConnectionStrategy": "Verbindungsstrategie",
   "Sidebar_PriorityDevice": "Bevorzugtes Gerät",
@@ -148,7 +148,7 @@
   "Dialog_AcrylicEnabledMsg": "Auf Standardhintergrund zurückgesetzt. Benutzerdefinierte Hintergründe sind nicht verfügbar.",
   "Dialog_AcrylicDisabled": "Acrylic-Unschärfe deaktiviert",
   "Dialog_AcrylicDisabledMsg": "Benutzerdefinierte Hintergründe wiederhergestellt.",
-  "Toast_ConnectedTitle": "OPPO Pods",
+  "Toast_ConnectedTitle": "CurryPods",
   "Toast_LeftLabel": "Links",
   "Toast_RightLabel": "Rechts",
   "Toast_CaseLabel": "Ladecase",
@@ -157,7 +157,7 @@
   "Toast_CriticalBattery": "Sehr niedriger Akkustand",
   "Toast_CriticalBatteryHint": "Bitte sofort aufladen",
   "Toast_Disconnected": "Verbindung getrennt",
-  "Tray_Tooltip": "OPPO Pods · Klick für Mini-Fenster / Doppelklick für Hauptfenster",
+  "Tray_Tooltip": "CurryPods · Klick für Mini-Fenster / Doppelklick für Hauptfenster",
   "Tray_ShowMini": "Mini-Fenster anzeigen",
   "Tray_ShowMain": "Hauptfenster anzeigen",
   "Tray_Quit": "Beenden",
@@ -292,7 +292,7 @@
   "Personal_EarphonePickTitle": "Ohrhörer-Bild wählen",
   "Battery_Unavailable": "-",
   "Common_Unavailable": "-",
-  "Common_AppDeviceName": "OPPO Pods",
+  "Common_AppDeviceName": "CurryPods",
   "Eq_CustomNewName": "Benutzerdefinierter EQ {0}",
   "Eq_CustomDefaultName": "Benutzerdefinierter EQ",
   "MultiDevice_Unnamed": "Gerät {0}",

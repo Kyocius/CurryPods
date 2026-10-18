@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
@@ -32,7 +32,7 @@ public sealed class ApplicationLog : TraceListener, IDisposable
         ConfigureConsoleEncoding();
         _directory = directory;
         Directory.CreateDirectory(directory);
-        _filePath = Path.Combine(directory, "OppoPodsManager.log");
+        _filePath = Path.Combine(directory, "CurryPods.log");
         CleanupOldBackups();
         _writer = CreateWriter(_filePath);
         _flushTimer = new Timer(_ => Flush(), null, FlushIntervalMs, FlushIntervalMs);
@@ -59,7 +59,7 @@ public sealed class ApplicationLog : TraceListener, IDisposable
         ArgumentException.ThrowIfNullOrWhiteSpace(targetPath);
         Flush();
         using var archive = ZipFile.Open(targetPath, ZipArchiveMode.Create);
-        var log = archive.CreateEntry("OppoPodsManager.log", CompressionLevel.Optimal);
+        var log = archive.CreateEntry("CurryPods.log", CompressionLevel.Optimal);
         using (var output = log.Open())
         using (var writer = new StreamWriter(output, new UTF8Encoding(false)))
             foreach (var entry in Snapshot())

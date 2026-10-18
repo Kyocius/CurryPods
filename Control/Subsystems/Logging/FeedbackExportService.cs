@@ -1,4 +1,4 @@
-﻿
+
 using OppoPodsManager.Control.Core.Models;
 namespace OppoPodsManager.Control.Subsystems.Logging;
 // 负责生成包含应用日志和设备摘要的反馈压缩包。
@@ -16,7 +16,7 @@ public sealed class FeedbackExportService
         try
         {
             Directory.CreateDirectory(directory);
-            var fileName = $"OPPOPods_feedback_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
+            var fileName = $"CurryPods_feedback_{DateTime.Now:yyyyMMdd_HHmmss}.zip";
             var path = Path.Combine(directory, fileName);
             _log.ExportZip(path, BuildSummary(version, snapshot));
             _log.Info("Feedback", "反馈日志导出完成：file=" + path + "。");

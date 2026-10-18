@@ -1,9 +1,8 @@
-# OPPO Pods Manager (Windows / Linux)
+# CurryPods (Windows App SDK)
 
 [中文](https://github.com/Zhaoyi-ya/OppoPodsManager/blob/main/README.md) | [English](https://github.com/Zhaoyi-ya/OppoPodsManager/blob/main/README_EN.md)
 
-> **📦 项目已归档**：本仓库自 2026-09-30 起停止开发与维护，现有代码保持原样归档，供大家自行查阅。
-> 原因与后续安排见 [项目归档说明](ARCHIVE.md)。
+> 当前分支正在将原 Avalonia 应用迁移到 Windows App SDK / WinUI 3，应用更名为 CurryPods。原项目归档记录见 [ARCHIVE.md](ARCHIVE.md)。
 
 ---
 
@@ -64,7 +63,7 @@
 - **独立开关**：低电量提醒、连接弹窗可分别关闭；弹窗时长可调（3–8 秒）
 
 ### 桌面体验
-- **系统托盘常驻**：左键点击开关主窗口，右键弹出功能菜单，鼠标悬浮显示实时电量
+- **系统托盘常驻**：单击打开状态小窗、双击恢复主窗口，右键弹出功能菜单，鼠标悬浮显示实时电量
 - **关闭到托盘**：关闭窗口时最小化到托盘而非退出（可在设置开启）
 - **开机自启**：随系统启动自动运行（可在设置开启）
 - **断连自动重连**：耳机断开后自动尝试重新连接
@@ -95,9 +94,9 @@
 ## 系统要求
 
 - **Windows**：Windows 10 版本 2004（内部版本 19041）及以上，64 位（x64 / arm64）
-- **Linux**：x64，需 BlueZ（通过 D-Bus 通信）
+- 当前 WinUI 3 项目只构建 Windows 版本；仓库保留的 Linux 通信源码暂不参与编译。
 - **硬件**：蓝牙适配器 + 已配对的耳机
-- **依赖**：使用自包含（NativeAOT）发布版下载即用，无需安装 .NET；若使用框架依赖版，需安装 .NET Runtime 10.0
+- **构建依赖**：.NET SDK 10、winapp CLI 0.6 或以上；当前目标为 `net10.0-windows10.0.26100.0`。
 
 ---
 
@@ -186,31 +185,27 @@
 若开启了"关闭到托盘"，关闭窗口只是最小化到系统托盘，右键托盘图标可退出。
 
 **Q：Linux 上能用吗？**
-可以。Linux 走 BlueZ（D-Bus）通道，功能范围与 Windows 一致；窗口毛玻璃效果仅 Windows 支持。
+当前 CurryPods 使用 Windows App SDK / WinUI 3，仅支持 Windows；历史 Avalonia 版本的 Linux 说明见原项目记录。
 
 ---
 
 ## 从源码构建
 
-需要 **.NET SDK 10.0** 及以上。
+安装 .NET SDK 10 和 [winapp CLI](https://learn.microsoft.com/windows/apps/get-started/start-here?tabs=command-line)，然后在项目根目录运行：
 
-```bash
-git clone https://github.com/Zhaoyi-ya/OppoPodsManager.git
-cd OppoPodsManager
-
-# 调试构建（Windows 侧后端由 RID 或构建参数决定）
-dotnet build -c Debug
-
-# 发布（NativeAOT 自包含单文件，无需目标机安装 .NET）
-dotnet publish -c Release -r win-x64      # Windows x64
-dotnet publish -c Release -r linux-x64    # Linux x64
+```powershell
+winapp run OppoPodsManager.csproj --arch x64
+# 仅构建并注册开发包
+winapp run OppoPodsManager.csproj --arch x64 --no-launch
+# 使用现有构建结果启动
+winapp run OppoPodsManager.csproj --arch x64 --no-build --detach
 ```
 
-后端实现按平台自动切换：Windows 使用 WinRT 蓝牙 API（`net10.0-windows10.0.19041.0`），
-Linux 使用 BlueZ D-Bus（`net10.0` + `Tmds.DBus`）。同一份代码库通过 MSBuild 条件编译选择，无需手动改代码。
+可将 `x64` 换成 `arm64`。可执行文件为 `CurryPods.exe`。项目文件、命名空间、MSIX 包标识和旧设置/图片目录继续沿用 `OppoPodsManager`，以兼容已有配置和包升级。
+
+Windows App SDK 实现参考 [Bili.Copilot](https://github.com/Richasy/Bili.Copilot)。托盘默认原生菜单通过 `ICommand` 执行操作；隐藏窗口保留页面状态；切换 Acrylic/Mica 时直接更新 SystemBackdrop；真正关闭时注销订阅、停止计时器并解除视觉树引用。
 
 ---
-
 ## 维护
 
 - [@Zhaoyi-ya](https://github.com/Zhaoyi-ya)

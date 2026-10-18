@@ -1,7 +1,7 @@
 using System;
-using System.Globalization;
-using Avalonia.Data.Converters;
-using Avalonia.Media;
+using Microsoft.UI.Xaml.Data;
+using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace OppoPodsManager.UI;
 
@@ -10,11 +10,11 @@ public class ConnectionStateToColorConverter : IValueConverter
 {
     public static readonly ConnectionStateToColorConverter Instance = new();
 
-    private static readonly SolidColorBrush Green = new(Color.FromRgb(0x4C, 0xAF, 0x50));
-    private static readonly SolidColorBrush Red   = new(Color.FromRgb(0xFF, 0x55, 0x55));
-    private static readonly SolidColorBrush Gray  = new(Color.FromRgb(0x66, 0x66, 0x66));
+    private static readonly SolidColorBrush Green = new(Color.FromArgb(255, 0x4C, 0xAF, 0x50));
+    private static readonly SolidColorBrush Red   = new(Color.FromArgb(255, 0xFF, 0x55, 0x55));
+    private static readonly SolidColorBrush Gray  = new(Color.FromArgb(255, 0x66, 0x66, 0x66));
 
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object Convert(object value, Type targetType, object parameter, string language)
     {
         var state = value as int? ?? 0;
         return state switch
@@ -25,6 +25,6 @@ public class ConnectionStateToColorConverter : IValueConverter
         };
     }
 
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object ConvertBack(object value, Type targetType, object parameter, string language)
         => throw new NotSupportedException();
 }

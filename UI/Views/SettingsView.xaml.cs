@@ -1,19 +1,31 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
+using System.Threading;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using OppoPodsManager.Assets.Localization;
+using OppoPodsManager.Assets.UserSettings;
 using OppoPodsManager.Control.Abstractions;
 using OppoPodsManager.Control.Core.Models;
+using OppoPodsManager.Control.Subsystems.Desktop;
+using OppoPodsManager.Control.Subsystems.Logging;
+
 namespace OppoPodsManager.UI.Views;
-public partial class SettingsView : PageView
+
+public sealed partial class SettingsView : UserControl, IPageView
 {
-    // 注意：品牌 → 子系列 → 机型 三级联动（设备型号选择）已按要求暂时移除，
-    // 原实现见 git 历史。用户设置存储键 ModelOverride 与相关本地化键保留，便于后续加回。
-    // 连接策略
+    public IViewHost? Host { get; set; }
+    private ControlManager? ControlManager;
+    private SettingsStore UiSettings = null!;
+    private ApplicationLog? Log;
+    private CommandDispatcher? CommandDispatcher;
+    private FrontendState? FrontendState;
+    private DesktopLinkService? DesktopLinks;
+
     private bool _syncingConnectionStrategy;
     private string _priorityOptionsSignature = "";
+
     private sealed class PriorityDeviceOption
     {
         public string Address { get; init; } = "";
@@ -21,11 +33,13 @@ public partial class SettingsView : PageView
         public bool IsAutomatic { get; init; }
         public override string ToString() => DisplayName;
     }
+
     public SettingsView()
     {
         InitializeComponent();
     }
-    public override void Attach(
+
+    public void Attach(
         ControlManager? controlManager,
         SettingsStore uiSettings,
         ApplicationLog? log,
@@ -33,53 +47,74 @@ public partial class SettingsView : PageView
         FrontendState? frontendState,
         DesktopLinkService? desktopLinks)
     {
-        base.Attach(controlManager, uiSettings, log, commandDispatcher, frontendState, desktopLinks);
-        // 开关初始化（页面本地设置）
+        ControlManager = controlManager;
+        UiSettings = uiSettings;
+        Log = log;
+        CommandDispatcher = commandDispatcher;
+        FrontendState = frontendState;
+        DesktopLinks = desktopLinks;
+
         CbTray.IsChecked = UiSettings.GetBool("TrayEnabled", false);
         CbAuto.IsChecked = UiSettings.GetBool("AutoStart", false);
-        // 接线（按钮 Click 由 XAML 自动绑定）
-        CbTray.IsCheckedChanged += CbTray_Changed;
-        CbAuto.IsCheckedChanged += CbAuto_Changed;
+
+        CbTray.Checked += CbTray_Changed;
+        CbTray.Unchecked += CbTray_Changed;
+        CbAuto.Checked += CbAuto_Changed;
+        CbAuto.Unchecked += CbAuto_Changed;
         CbPriorityDevice.SelectionChanged += CbPriorityDevice_Changed;
     }
-    public override void ApplySnapshot(BusinessSnapshot snapshot)
+
+    public void ApplySnapshot(BusinessSnapshot snapshot)
     {
         DiDeviceName.Text = DeviceText.DeviceName(snapshot.Identity?.DisplayName, snapshot.DeviceName);
         DiFirmware.Text = snapshot.Identity?.FirmwareVersion ?? "-";
         DiCodec.Text = snapshot.Identity?.Codec ?? "-";
     }
-    /// <summary>导航到本页时刷新一次设备基本信息（与快照应用等价，纯本地）。</summary>
+
     public void RefreshDeviceInfo()
     {
-        if (FrontendState?.Snapshot is { } snapshot) ApplySnapshot(snapshot);
+        if (FrontendState?.Snapshot is { } snapshot)
+            ApplySnapshot(snapshot);
     }
-    // ====== 本机开关 ======
-    private void CbTray_Changed(object? s, RoutedEventArgs e)
+
+    private void CbTray_Changed(object sender, RoutedEventArgs e)
     {
         var on = CbTray.IsChecked == true;
         UiSettings.SetBool("TrayEnabled", on);
         Log?.Debug("UI", $"设置: 关闭到托盘 -> {on}");
     }
-    private void CbAuto_Changed(object? s, RoutedEventArgs e)
+
+    private void CbAuto_Changed(object sender, RoutedEventArgs e)
     {
         var on = CbAuto.IsChecked == true;
         UiSettings.SetBool("AutoStart", on);
+        WindowsStartup.TrySetEnabled(on);
         Log?.Debug("UI", $"设置: 开机自启 -> {on}");
     }
-    // ====== 工具按钮 ======
-    // 不再联网检测版本：直接用默认浏览器打开 GitHub Releases 页面。
-    private async void BtnCheckUpdate_Click(object? s, RoutedEventArgs e)
+
+    private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
     {
-        try { if (Host is not null) await Host.OpenUpdatePageAsync(); }
-        finally { BtnCheckUpdate.IsEnabled = true; }
+        try
+        {
+            if (Host is not null)
+                await Host.OpenUpdatePageAsync();
+        }
+        finally
+        {
+            BtnCheckUpdate.IsEnabled = true;
+        }
     }
-    private void BtnFeedback_Click(object? s, RoutedEventArgs e)
+
+    private void BtnFeedback_Click(object sender, RoutedEventArgs e)
         => _ = Host?.OpenFeedbackAsync();
-    private void BtnViewLog_Click(object? s, RoutedEventArgs e)
+
+    private void BtnViewLog_Click(object sender, RoutedEventArgs e)
         => Host?.RequestNavigate("log");
-    private void About_Click(object? s, RoutedEventArgs e)
+
+    private void About_Click(object sender, RoutedEventArgs e)
         => Host?.RequestNavigate("about");
-    private void BtnRestoreHiddenDevices_Click(object? s, RoutedEventArgs e)
+
+    private void BtnRestoreHiddenDevices_Click(object sender, RoutedEventArgs e)
     {
         ControlManager?.RestoreHiddenMultiDevices();
         Host?.ResyncMultiDeviceList();
@@ -88,20 +123,21 @@ public partial class SettingsView : PageView
             manager => manager.RefreshMultiDeviceAsync(CancellationToken.None));
         Log?.Debug("UI", "已清除本地隐藏设备策略并同步多设备状态");
     }
-    // ====== 连接策略卡 ======
+
     internal void UpdateConnectionStrategyVisibility(bool visible)
     {
-        DiConnectionStrategyCard.IsVisible = visible;
-        PriorityDevicePanel.IsVisible = visible;
+        DiConnectionStrategyCard.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        PriorityDevicePanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
+
     internal void SyncConnectionStrategy(
         IBrandManager manager,
         MultiDeviceSnapshot multiDevice,
         IReadOnlyList<ConnectedDeviceSnapshot> connectedDevices)
     {
         var canManage = manager.Presentation.CanManageMultiDevice;
-        DiConnectionStrategyCard.IsVisible = canManage;
-        PriorityDevicePanel.IsVisible = canManage;
+        DiConnectionStrategyCard.Visibility = canManage ? Visibility.Visible : Visibility.Collapsed;
+        PriorityDevicePanel.Visibility = canManage ? Visibility.Visible : Visibility.Collapsed;
         _syncingConnectionStrategy = true;
         try
         {
@@ -112,9 +148,11 @@ public partial class SettingsView : PageView
                 _priorityOptionsSignature = "";
                 return;
             }
+
             var signature = string.Join("|", connectedDevices.Select(device =>
                 $"{device.Address};{device.Name};{device.IsCurrent}"))
                 + $"|auto={multiDevice.IsAutomaticPriority}|priority={multiDevice.PriorityDeviceAddress}";
+
             if (signature != _priorityOptionsSignature)
             {
                 _priorityOptionsSignature = signature;
@@ -125,16 +163,20 @@ public partial class SettingsView : PageView
                     DisplayName = LanguageManager.Instance.GetString(LanguageManager.Instance.MultiDevice_Automatic)
                 });
                 foreach (var device in connectedDevices)
+                {
                     CbPriorityDevice.Items.Add(new PriorityDeviceOption
                     {
                         Address = device.Address,
                         DisplayName = DeviceText.MultiDeviceName(device)
                     });
+                }
             }
+
             var selected = multiDevice.IsAutomaticPriority
                 ? CbPriorityDevice.Items.OfType<PriorityDeviceOption>().FirstOrDefault(option => option.IsAutomatic)
                 : CbPriorityDevice.Items.OfType<PriorityDeviceOption>().FirstOrDefault(option =>
                     string.Equals(option.Address, multiDevice.PriorityDeviceAddress, StringComparison.OrdinalIgnoreCase));
+
             CbPriorityDevice.SelectedItem = selected;
             CbPriorityDevice.PlaceholderText = selected is null && !multiDevice.IsAutomaticPriority
                 ? LanguageManager.Instance.GetString(LanguageManager.Instance.MultiDevice_PriorityUnavailable)
@@ -145,8 +187,10 @@ public partial class SettingsView : PageView
             _syncingConnectionStrategy = false;
         }
     }
+
     internal void ResetPrioritySignature() => _priorityOptionsSignature = "";
-    private void CbPriorityDevice_Changed(object? sender, SelectionChangedEventArgs e)
+
+    private void CbPriorityDevice_Changed(object sender, SelectionChangedEventArgs e)
     {
         if (CbPriorityDevice.SelectedItem is not PriorityDeviceOption option
             || FrontendState?.Snapshot.IsConnected != true)
@@ -154,6 +198,7 @@ public partial class SettingsView : PageView
         if (_syncingConnectionStrategy) return;
         ApplyPrioritySelection(option);
     }
+
     private void ApplyPrioritySelection(PriorityDeviceOption option)
     {
         _ = CommandDispatcher?.RunAsync("多设备优先级", manager =>
@@ -162,6 +207,7 @@ public partial class SettingsView : PageView
                 option.IsAutomatic ? null : option.Address,
                 CancellationToken.None));
     }
+
     internal void RefreshRestoreHiddenDevicesButton()
     {
         var count = ControlManager?.GetHiddenMultiDeviceCount() ?? 0;

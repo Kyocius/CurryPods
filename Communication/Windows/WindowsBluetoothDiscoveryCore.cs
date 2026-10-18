@@ -13,7 +13,8 @@ internal static class WindowsBluetoothDiscoveryCore
     private const int WinRtTimeoutMs = 4000;
     private const int MaxNameSize = 248;
 
-    public static IReadOnlyList<(ulong Address, string Name, IReadOnlyList<Guid> ServiceIds)> ListConnected()
+    public static async Task<IReadOnlyList<(ulong Address, string Name, IReadOnlyList<Guid> ServiceIds)>> ListConnectedAsync(
+        CancellationToken cancellationToken)
     {
         var merged = new Dictionary<ulong, (string Name, IReadOnlyList<Guid> ServiceIds)>();
         try
@@ -33,17 +34,20 @@ internal static class WindowsBluetoothDiscoveryCore
 
         try
         {
-            var task = EnumerateWinRtAsync();
-            if (task.Wait(WinRtTimeoutMs))
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(WinRtTimeoutMs);
+            var devices = await EnumerateWinRtAsync(timeout.Token).ConfigureAwait(false);
+            foreach (var device in devices)
             {
-                foreach (var device in task.Result)
-                {
-                    if (device.Address == 0)
-                        continue;
-                    var serviceIds = ReadServiceIds(device.Address);
-                    merged.TryAdd(device.Address, (device.Name, serviceIds));
-                }
+                if (device.Address == 0)
+                    continue;
+                var serviceIds = ReadServiceIds(device.Address);
+                merged.TryAdd(device.Address, (device.Name, serviceIds));
             }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception exception)
         {
@@ -56,16 +60,16 @@ internal static class WindowsBluetoothDiscoveryCore
             .ToArray();
     }
 
-    private static async Task<IReadOnlyList<(ulong Address, string Name)>> EnumerateWinRtAsync()
+    private static async Task<IReadOnlyList<(ulong Address, string Name)>> EnumerateWinRtAsync(CancellationToken cancellationToken)
     {
         var result = new List<(ulong Address, string Name)>();
         var seen = new HashSet<ulong>();
         var selector = global::Windows.Devices.Bluetooth.BluetoothDevice.GetDeviceSelectorFromConnectionStatus(
             global::Windows.Devices.Bluetooth.BluetoothConnectionStatus.Connected);
-        var devices = await global::Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(selector);
+        var devices = await global::Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(selector).AsTask(cancellationToken).ConfigureAwait(false);
         foreach (var info in devices)
         {
-            var device = await global::Windows.Devices.Bluetooth.BluetoothDevice.FromIdAsync(info.Id);
+            using var device = await global::Windows.Devices.Bluetooth.BluetoothDevice.FromIdAsync(info.Id).AsTask(cancellationToken).ConfigureAwait(false);
             if (device is null || device.ConnectionStatus != global::Windows.Devices.Bluetooth.BluetoothConnectionStatus.Connected)
                 continue;
 
@@ -104,7 +108,8 @@ internal static class WindowsBluetoothDiscoveryCore
         }
         finally
         {
-            BluetoothFindDeviceClose(handle);
+            if (handle != IntPtr.Zero)
+                BluetoothFindDeviceClose(handle);
         }
         return result;
     }

@@ -1,4 +1,4 @@
-﻿{
+{
   "Sidebar_MultiDevice": "设备列表",
   "Sidebar_ConnectionStrategy": "连接策略",
   "Sidebar_PriorityDevice": "优先连接设备",
@@ -148,7 +148,7 @@
   "Dialog_AcrylicEnabledMsg": "已切回默认背景，自定义背景选项将不可用。",
   "Dialog_AcrylicDisabled": "Acrylic 模糊已关闭",
   "Dialog_AcrylicDisabledMsg": "自定义背景选项已恢复。",
-  "Toast_ConnectedTitle": "OPPO Pods",
+  "Toast_ConnectedTitle": "CurryPods",
   "Toast_LeftLabel": "左耳",
   "Toast_RightLabel": "右耳",
   "Toast_CaseLabel": "充电盒",
@@ -157,7 +157,7 @@
   "Toast_CriticalBattery": "电量极低",
   "Toast_CriticalBatteryHint": "请立即充电",
   "Toast_Disconnected": "连接已断开",
-  "Tray_Tooltip": "OPPO Pods · 单击小窗 / 双击主窗口",
+  "Tray_Tooltip": "CurryPods · 单击小窗 / 双击主窗口",
   "Tray_ShowMini": "显示小窗口",
   "Tray_ShowMain": "显示主页面",
   "Tray_Quit": "退出",
@@ -292,7 +292,7 @@
   "Personal_EarphonePickTitle": "选择耳机图案",
   "Battery_Unavailable": "-",
   "Common_Unavailable": "-",
-  "Common_AppDeviceName": "OPPO Pods",
+  "Common_AppDeviceName": "CurryPods",
   "Eq_CustomNewName": "自定义 EQ {0}",
   "Eq_CustomDefaultName": "自定义 EQ",
   "MultiDevice_Unnamed": "设备 {0}",

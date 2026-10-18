@@ -1,85 +1,129 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
-using Avalonia.Threading;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media.Imaging;
+using OppoPodsManager.Assets.Localization;
+using OppoPodsManager.Assets.UserSettings;
 using OppoPodsManager.Control.Abstractions;
 using OppoPodsManager.Control.Brands.Oppo.Features;
 using OppoPodsManager.Control.Brands.Oppo.Models;
-using OppoPodsManager.Control.Core.Models;
 using OppoPodsManager.Control.Core.Features;
-using OppoPodsManager.Assets.Localization;
-using OppoPodsManager.Assets.UserSettings;
+using OppoPodsManager.Control.Core.Models;
 using OppoPodsManager.Control.Subsystems.Logging;
 using StatusWindow = OppoPodsManager.UI.MiniWindow.Status.SmallWindow;
 
 namespace OppoPodsManager.UI.Tray;
 
-// 管理 Windows 托盘入口，并让主窗口可以在不退出蓝牙会话的情况下恢复显示。
 public sealed class TrayIconController : IDisposable
 {
-    private readonly IClassicDesktopStyleApplicationLifetime _desktop;
     private readonly FrontendState _frontendState;
     private readonly ControlManager _controlManager;
     private readonly CommandDispatcher _commandDispatcher;
     private readonly SettingsManager _settings;
     private readonly Func<Window?> _mainWindow;
-    private readonly Avalonia.Controls.TrayIcon _icon;
-    private DispatcherTimer? _clickTimer;
+    private readonly Action _exitApplication;
+    private readonly H.NotifyIcon.TaskbarIcon _icon;
+    private readonly ApplicationLog _log;
     private StatusWindow? _miniWindow;
     private string _menuSignature = "";
     private bool _disposed;
 
     public TrayIconController(
-        IClassicDesktopStyleApplicationLifetime desktop,
         FrontendState frontendState,
         ControlManager controlManager,
         CommandDispatcher commandDispatcher,
         SettingsManager settings,
         ApplicationLog log,
-        Func<Window?> mainWindow)
+        Func<Window?> mainWindow,
+        Action exitApplication)
     {
-        _desktop = desktop;
         _frontendState = frontendState;
         _controlManager = controlManager;
-        // 托盘复用应用层命令调度器，避免 UI 层重复创建控制服务。
         _commandDispatcher = commandDispatcher;
         _settings = settings;
+        _log = log;
         _mainWindow = mainWindow;
-        _icon = new Avalonia.Controls.TrayIcon { Icon = LoadIcon() };
-        RefreshMenu(_frontendState.Snapshot, force: true);
-        _icon.Clicked += OnClicked;
-        _frontendState.Changed += OnFrontendStateChanged;
-        _settings.Changed += OnSettingsChanged;
-        Avalonia.Controls.TrayIcon.SetIcons(Application.Current!, new TrayIcons { _icon });
-    }
+        _exitApplication = exitApplication;
 
-    // 单击切换状态小窗；双击在计时窗口内恢复主窗口。
-    private void OnClicked(object? sender, EventArgs args)
-    {
-        ApplicationLog.Current?.Info("Tray", $"托盘图标点击：pendingDoubleClick={_clickTimer is not null}。");
-        if (_clickTimer is null)
+        _icon = new H.NotifyIcon.TaskbarIcon
         {
-            _clickTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(350), DispatcherPriority.Background, (_, _) =>
+            Id = new Guid("8E2D7745-6B98-4B28-9214-4B22B2F4450D")
+        };
+        try
+        {
+            var baseDir = AppContext.BaseDirectory;
+            var iconPath = Path.Combine(baseDir, "Assets", "VisualAssets", "tuopan.ico");
+            if (File.Exists(iconPath))
             {
-                _clickTimer?.Stop();
-                _clickTimer = null;
-                ToggleMiniWindow();
-            });
-            _clickTimer.Start();
-            return;
+                try
+                {
+                    var sysIcon = new System.Drawing.Icon(iconPath);
+                    _icon.Icon = sysIcon;
+                }
+                catch
+                {
+                    _icon.IconSource = new BitmapImage(new Uri(iconPath));
+                }
+            }
+            else
+            {
+                _icon.IconSource = new BitmapImage(new Uri("ms-appx:///Assets/VisualAssets/tuopan.ico"));
+            }
+        }
+        catch (Exception ex)
+        {
+            log.Error("Tray", "加载托盘图标失败", ex);
         }
 
-        _clickTimer.Stop();
-        _clickTimer = null;
-        ShowMainWindow();
+        _icon.LeftClickCommand = new TrayCommand(ToggleMiniWindow);
+        _icon.DoubleClickCommand = new TrayCommand(ShowMainWindow);
+        _icon.ToolTipText = BuildTooltip(_frontendState.Snapshot);
+
+        RefreshMenu(_frontendState.Snapshot, force: true);
+        _frontendState.Changed += OnFrontendStateChanged;
+        _settings.Changed += OnSettingsChanged;
+
+        TryCreateIcon();
     }
 
-    // 业务快照变化时更新菜单勾选状态和悬停文本。
+    private void TryCreateIcon()
+    {
+        try
+        {
+            if (!_icon.IsCreated)
+            {
+                _icon.ForceCreate(false);
+                _log.Info("Tray", "托盘图标初始化成功。");
+            }
+        }
+        catch (Exception ex)
+        {
+            var win32Err = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
+            _log.Info("Tray", $"初始化托盘图标暂未成功 (Win32Error=0x{win32Err:X}): {ex.Message}");
+            AppDispatcher.Post(async () =>
+            {
+                await Task.Delay(1200);
+                if (_disposed || _icon.IsCreated)
+                    return;
+                try
+                {
+                    _icon.ForceCreate(false);
+                    _log.Info("Tray", "托盘图标延迟初始化成功。");
+                }
+                catch (Exception retryEx)
+                {
+                    var retryErr = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
+                    _log.Error("Tray", $"托盘图标延迟初始化仍失败 (Win32Error=0x{retryErr:X})", retryEx);
+                }
+            });
+        }
+    }
+
     private void OnFrontendStateChanged(object? sender, BusinessSnapshot snapshot)
     {
-        Dispatcher.UIThread.Post(() =>
+        AppDispatcher.Post(() =>
         {
             if (_disposed)
                 return;
@@ -88,24 +132,22 @@ public sealed class TrayIconController : IDisposable
         });
     }
 
-    // 只有菜单状态变化时才重建原生菜单，避免电量快照刷新造成原生资源持续累积。
     private void RefreshMenu(BusinessSnapshot snapshot, bool force = false)
     {
         var signature = BuildMenuSignature(snapshot);
         if (!force && string.Equals(signature, _menuSignature, StringComparison.Ordinal))
             return;
 
-        _icon.Menu = TrayMenu.Create(
+        _icon.ContextFlyout = TrayMenu.Create(
             snapshot,
             ActiveDeviceManager,
             _commandDispatcher,
             ShowMainWindow,
             ToggleMiniWindow,
-            ExitApplication);
+            _exitApplication);
         _menuSignature = signature;
     }
 
-    // 生成托盘菜单实际依赖的状态签名，电量等不影响菜单的状态不参与比较。
     private string BuildMenuSignature(BusinessSnapshot snapshot)
     {
         var presentation = ActiveDeviceManager?.Presentation;
@@ -123,7 +165,6 @@ public sealed class TrayIconController : IDisposable
             controls);
     }
 
-    // 将分组降噪选项展开到签名，确保新增或移除子模式时菜单同步重建。
     private static IEnumerable<string> FlattenNoiseOptionsForSignature(NoiseOptionModel option)
     {
         yield return option.Key;
@@ -131,7 +172,6 @@ public sealed class TrayIconController : IDisposable
             yield return child;
     }
 
-    // 构造原项目风格的托盘提示，显示型号和已知电量摘要。
     private static string BuildTooltip(BusinessSnapshot snapshot)
     {
         var name = DeviceText.DeviceName(snapshot.Identity?.ModelName, snapshot.DeviceName);
@@ -145,17 +185,15 @@ public sealed class TrayIconController : IDisposable
         return parts.Count == 0 ? name : $"{name}\n{string.Join(" ", parts)}";
     }
 
-    // 将单个电池快照转换为托盘提示片段。
     private static void AddBattery(List<string> parts, string channel, BatteryLevel? battery)
     {
         if (battery is { } value)
             parts.Add($"{channel}:{value.Percent}%{(value.IsCharging ? "⚡" : "")}");
     }
 
-    // 设置或语言变化后刷新已经创建的小窗，保持其与主窗口外观一致。
     private void OnSettingsChanged(object? sender, AppSettings settings)
     {
-        Dispatcher.UIThread.Post(() =>
+        AppDispatcher.Post(() =>
         {
             if (_disposed)
                 return;
@@ -170,45 +208,43 @@ public sealed class TrayIconController : IDisposable
         });
     }
 
-    // 延迟创建的小窗只在用户单击托盘时分配窗口资源。
     private void ToggleMiniWindow()
     {
-        ApplicationLog.Current?.Info("Tray", $"切换状态小窗：visible={_miniWindow?.IsVisible == true}。");
-        if (_miniWindow is { IsVisible: true })
+        if (_disposed)
+            return;
+        ApplicationLog.Current?.Info("Tray", "切换状态小窗。");
+        if (_miniWindow is not null)
         {
-            _miniWindow.Hide();
+            _miniWindow.Close();
             return;
         }
-
         _miniWindow ??= CreateMiniWindow();
-        _miniWindow.Show();
         _miniWindow.Activate();
-        var screen = _miniWindow.Screens?.Primary;
-        if (screen is null)
-            return;
-        var scale = _miniWindow.RenderScaling <= 0 ? 1d : _miniWindow.RenderScaling;
-        var frame = _miniWindow.FrameSize;
-        var width = (frame?.Width ?? _miniWindow.Width) * scale;
-        var height = (frame?.Height ?? _miniWindow.Height) * scale;
-        _miniWindow.Position = new PixelPoint(
-            (int)Math.Round(screen.WorkingArea.Right - width),
-            (int)Math.Round(screen.WorkingArea.Bottom - height));
     }
 
-    // 小窗关闭后不保留不可复用的 Window 对象。
     private StatusWindow CreateMiniWindow()
     {
-        // Next 小窗只接收快照、控制器和设置，不直接接触通信对象。
         var window = new StatusWindow(
             _frontendState,
             _controlManager,
             _commandDispatcher,
             _settings,
-            () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                _miniWindow?.Hide();
-            }));
-        window.Closed += (_, _) => _miniWindow = null;
+            onDeactivated: null);
+        // Capture the actual window: a queued deactivation must not close its successor.
+        window.Activated += (_, args) =>
+        {
+            if (args.WindowActivationState == WindowActivationState.Deactivated)
+                AppDispatcher.Post(() =>
+                {
+                    if (ReferenceEquals(_miniWindow, window))
+                        window.Close();
+                });
+        };
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_miniWindow, window))
+                _miniWindow = null;
+        };
         return window;
     }
 
@@ -216,29 +252,20 @@ public sealed class TrayIconController : IDisposable
 
     private void ShowMainWindow()
     {
+        if (_disposed)
+            return;
         ApplicationLog.Current?.Info("Tray", "托盘请求显示主窗口。");
-        _miniWindow?.Hide();
+        _miniWindow?.Close();
+        _miniWindow = null;
         var window = _mainWindow();
         if (window is null)
             return;
 
-        window.Show();
-        window.WindowState = WindowState.Normal;
+        window.AppWindow.Show();
+        if (window.AppWindow.Presenter is Microsoft.UI.Windowing.OverlappedPresenter presenter
+            && presenter.State == Microsoft.UI.Windowing.OverlappedPresenterState.Minimized)
+            presenter.Restore();
         window.Activate();
-    }
-
-    // 显式关闭应用，确保桌面生命周期触发控制层释放。
-    private void ExitApplication()
-    {
-        ApplicationLog.Current?.Info("Tray", "托盘请求退出应用。");
-        _desktop.Shutdown();
-    }
-
-    // 从嵌入资源读取图标，避免发布目录缺少图标文件。
-    private static WindowIcon LoadIcon()
-    {
-        using var stream = AssetLoader.Open(new Uri("avares://OppoPodsManager/Assets/VisualAssets/tuopan.ico"));
-        return new WindowIcon(new Bitmap(stream));
     }
 
     public void Dispose()
@@ -247,12 +274,13 @@ public sealed class TrayIconController : IDisposable
             return;
 
         _disposed = true;
-        _icon.Clicked -= OnClicked;
         _frontendState.Changed -= OnFrontendStateChanged;
         _settings.Changed -= OnSettingsChanged;
-        _clickTimer?.Stop();
         _miniWindow?.Close();
-        Avalonia.Controls.TrayIcon.SetIcons(Application.Current!, new TrayIcons());
+        _miniWindow = null;
+        // H.NotifyIcon 2.4.1's property callback rejects a null ContextFlyout.
+        if (_icon.ContextFlyout is MenuFlyout menu)
+            menu.Items.Clear();
         _icon.Dispose();
     }
 }

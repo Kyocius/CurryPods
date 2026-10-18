@@ -1,4 +1,9 @@
-using Avalonia.Media.Imaging;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using SkiaSharp;
 
 namespace OppoPodsManager.Assets.VisualAssets;
@@ -12,8 +17,10 @@ public sealed class BackgroundImageManager : IDisposable
         "OppoPodsManager",
         "Background");
 
-    private readonly Dictionary<string, Bitmap> _backgroundCache = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Bitmap> _thumbnailCache = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly string CacheDirectory = Path.Combine(ManagedDirectory, "Cache");
+
+    private readonly Dictionary<string, ImageSource> _backgroundCache = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ImageSource> _thumbnailCache = new(StringComparer.OrdinalIgnoreCase);
 
     // 构造包含文件版本、目标宽度和模糊参数的稳定缓存键。
     public string BuildCacheKey(string path, int targetWidth, int blur)
@@ -23,40 +30,41 @@ public sealed class BackgroundImageManager : IDisposable
     public bool IsAvailable(string? path)
         => !string.IsNullOrWhiteSpace(path) && File.Exists(path);
 
-    // 获取或创建指定尺寸和模糊程度的背景位图。
-    public Bitmap GetOrCreateBitmap(string path, int targetWidth, int blur, string cacheKey)
+    // 获取或创建指定尺寸和模糊程度的背景图片源。
+    public ImageSource GetOrCreateBitmap(string path, int targetWidth, int blur, string cacheKey)
     {
         if (_backgroundCache.TryGetValue(cacheKey, out var cached))
             return cached;
 
-        var bitmap = LoadBitmap(path, targetWidth, blur);
+        var bitmap = LoadBitmap(path, targetWidth, blur, cacheKey);
         _backgroundCache[cacheKey] = bitmap;
         return bitmap;
     }
 
     // 获取或创建背景缩略图。
-    public Bitmap GetOrCreateThumbnail(string path)
+    public ImageSource GetOrCreateThumbnail(string path)
     {
         var key = $"{path}|{File.GetLastWriteTimeUtc(path).Ticks}|thumb=128";
         if (_thumbnailCache.TryGetValue(key, out var cached))
             return cached;
 
         RemoveThumbnail(path);
-        using var stream = File.OpenRead(path);
-        var thumbnail = Bitmap.DecodeToWidth(stream, 128, BitmapInterpolationMode.HighQuality);
+        var thumbnail = new BitmapImage(new Uri(path))
+        {
+            DecodePixelWidth = 128
+        };
         _thumbnailCache[key] = thumbnail;
         return thumbnail;
     }
 
-    // 清理不再使用的背景位图，并保留当前缓存项。
+    // 清理不再使用的背景图片，并保留当前缓存项。
     public void ClearBackgroundCache(string? keepKey)
     {
-        foreach (var (key, bitmap) in _backgroundCache.ToList())
+        foreach (var key in _backgroundCache.Keys.ToList())
         {
             if (key == keepKey)
                 continue;
 
-            bitmap.Dispose();
             _backgroundCache.Remove(key);
         }
     }
@@ -64,20 +72,17 @@ public sealed class BackgroundImageManager : IDisposable
     // 清理全部背景缩略图缓存。
     public void ClearThumbnailCache()
     {
-        foreach (var bitmap in _thumbnailCache.Values)
-            bitmap.Dispose();
         _thumbnailCache.Clear();
     }
 
     // 移除指定文件对应的缩略图缓存。
     public void RemoveThumbnail(string path)
     {
-        foreach (var (key, bitmap) in _thumbnailCache.ToList())
+        foreach (var key in _thumbnailCache.Keys.ToList())
         {
             if (!key.StartsWith(path + "|", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            bitmap.Dispose();
             _thumbnailCache.Remove(key);
         }
     }
@@ -154,65 +159,81 @@ public sealed class BackgroundImageManager : IDisposable
         }
     }
 
-    // 使用与原项目一致的尺寸缩放和 Skia 模糊流程加载背景图。
-    public static Bitmap LoadShared(string path, int targetWidth, int blur)
-        => LoadBitmap(path, targetWidth, blur);
-
     public void Dispose()
     {
         ClearBackgroundCache(null);
         ClearThumbnailCache();
     }
 
-    // 根据模糊参数选择普通缩放或 Skia 模糊加载路径。
-    private static Bitmap LoadBitmap(string path, int targetWidth, int blur)
+    private static ImageSource LoadBitmap(string path, int targetWidth, int blur, string cacheKey)
     {
         if (blur <= 0)
         {
-            using var stream = File.OpenRead(path);
-            return Bitmap.DecodeToWidth(stream, targetWidth, BitmapInterpolationMode.HighQuality);
+            return new BitmapImage(new Uri(path))
+            {
+                DecodePixelWidth = targetWidth
+            };
         }
 
-        return LoadBlurredBitmap(path, targetWidth, blur);
+        return LoadBlurredBitmap(path, targetWidth, blur, cacheKey);
     }
 
-    // 使用 Skia 缩放并施加高斯模糊后转换为 Avalonia 位图。
-    private static Bitmap LoadBlurredBitmap(string path, int targetWidth, int blur)
+    private static ImageSource LoadBlurredBitmap(string path, int targetWidth, int blur, string cacheKey)
     {
-        using var codec = SKCodec.Create(path);
-        if (codec is null)
-            return new Bitmap(path);
-
-        var sourceInfo = codec.Info;
-        var scale = targetWidth / (double)Math.Max(1, sourceInfo.Width);
-        var targetHeight = Math.Max(1, (int)Math.Round(sourceInfo.Height * scale));
-        var scaledSize = codec.GetScaledDimensions((float)Math.Min(1.0, scale));
-        if (scaledSize.Width <= 0 || scaledSize.Height <= 0)
-            scaledSize = new SKSizeI(targetWidth, targetHeight);
-
-        var decodeInfo = new SKImageInfo(scaledSize.Width, scaledSize.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
-        using var source = new SKBitmap(decodeInfo);
-        var result = codec.GetPixels(decodeInfo, source.GetPixels());
-        if (result is not SKCodecResult.Success and not SKCodecResult.IncompleteInput)
-            return new Bitmap(path);
-
-        var outputInfo = new SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
-        using var surface = SKSurface.Create(outputInfo);
-        var canvas = surface.Canvas;
-        canvas.Clear(SKColors.Transparent);
-        using var paint = new SKPaint
+        try
         {
-            IsAntialias = true,
-            ImageFilter = SKImageFilter.CreateBlur(blur, blur)
-        };
-        var sampling = new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear);
-        using var sourceImage = SKImage.FromBitmap(source);
-        canvas.DrawImage(sourceImage, new SKRect(0, 0, targetWidth, targetHeight), sampling, paint);
-        canvas.Flush();
+            Directory.CreateDirectory(CacheDirectory);
+            var safeHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(cacheKey)))[..16];
+            var cachedPath = Path.Combine(CacheDirectory, $"bg_{safeHash}.png");
 
-        using var image = surface.Snapshot();
-        using var data = image.Encode(SKEncodedImageFormat.Png, 85);
-        using var stream = data.AsStream();
-        return new Bitmap(stream);
+            if (File.Exists(cachedPath))
+            {
+                return new BitmapImage(new Uri(cachedPath));
+            }
+
+            using var codec = SKCodec.Create(path);
+            if (codec is null)
+                return new BitmapImage(new Uri(path));
+
+            var sourceInfo = codec.Info;
+            var scale = targetWidth / (double)Math.Max(1, sourceInfo.Width);
+            var targetHeight = Math.Max(1, (int)Math.Round(sourceInfo.Height * scale));
+            var scaledSize = codec.GetScaledDimensions((float)Math.Min(1.0, scale));
+            if (scaledSize.Width <= 0 || scaledSize.Height <= 0)
+                scaledSize = new SKSizeI(targetWidth, targetHeight);
+
+            var decodeInfo = new SKImageInfo(scaledSize.Width, scaledSize.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+            using var source = new SKBitmap(decodeInfo);
+            var result = codec.GetPixels(decodeInfo, source.GetPixels());
+            if (result is not SKCodecResult.Success and not SKCodecResult.IncompleteInput)
+                return new BitmapImage(new Uri(path));
+
+            var outputInfo = new SKImageInfo(targetWidth, targetHeight, SKColorType.Bgra8888, SKAlphaType.Premul);
+            using var surface = SKSurface.Create(outputInfo);
+            var canvas = surface.Canvas;
+            canvas.Clear(SKColors.Transparent);
+            using var blurFilter = SKImageFilter.CreateBlur(blur, blur);
+            using var paint = new SKPaint
+            {
+                IsAntialias = true,
+                ImageFilter = blurFilter
+            };
+            using var sourceImage = SKImage.FromBitmap(source);
+            canvas.DrawImage(sourceImage, new SKRect(0, 0, targetWidth, targetHeight), paint);
+            canvas.Flush();
+
+            using var image = surface.Snapshot();
+            using var data = image.Encode(SKEncodedImageFormat.Png, 85);
+            using (var fileStream = File.Create(cachedPath))
+            {
+                data.SaveTo(fileStream);
+            }
+
+            return new BitmapImage(new Uri(cachedPath));
+        }
+        catch
+        {
+            return new BitmapImage(new Uri(path));
+        }
     }
 }

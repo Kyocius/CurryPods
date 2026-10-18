@@ -1,18 +1,23 @@
-﻿using Avalonia.Controls;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.UI.Xaml.Controls;
+using OppoPodsManager.Assets.Localization;
 using OppoPodsManager.Control.Abstractions;
 using OppoPodsManager.Control.Brands.Oppo.Features;
 using OppoPodsManager.Control.Brands.Oppo.Models;
-using OppoPodsManager.Control.Core.Models;
-using OppoPodsManager.Assets.Localization;
-using OppoPodsManager.Control.Subsystems.Logging;
 using OppoPodsManager.Control.Core.Features;
+using OppoPodsManager.Control.Core.Models;
+using OppoPodsManager.Control.Subsystems.Logging;
 
 namespace OppoPodsManager.UI.Tray;
 
 // 构建托盘的最小常驻菜单，所有业务状态仍由主窗口和控制层维护。
 internal static class TrayMenu
 {
-    public static NativeMenu Create(
+    public static MenuFlyout Create(
         BusinessSnapshot snapshot,
         IBrandManager? manager,
         CommandDispatcher dispatcher,
@@ -20,40 +25,43 @@ internal static class TrayMenu
         Action showMiniWindow,
         Action exitApplication)
     {
-        var menu = new NativeMenu();
+        var menu = new MenuFlyout();
         if (snapshot.IsConnected && manager is not null)
         {
             AddDeviceControls(menu, snapshot, manager, dispatcher);
-            menu.Add(new NativeMenuItemSeparator());
+            menu.Items.Add(new MenuFlyoutSeparator());
         }
-        var showItem = new NativeMenuItem(TranslationCatalog.Get("Tray_ShowMain"));
-        showItem.Click += (_, _) =>
+
+        var showItem = new MenuFlyoutItem { Text = TranslationCatalog.Get("Tray_ShowMain") };
+        showItem.Command = new TrayCommand(() =>
         {
             ApplicationLog.Current?.Info("Tray", "点击托盘菜单：显示主窗口。");
             showMainWindow();
-        };
-        var miniItem = new NativeMenuItem(TranslationCatalog.Get("Tray_ShowMini"));
-        miniItem.Click += (_, _) =>
+        });
+
+        var miniItem = new MenuFlyoutItem { Text = TranslationCatalog.Get("Tray_ShowMini") };
+        miniItem.Command = new TrayCommand(() =>
         {
             ApplicationLog.Current?.Info("Tray", "点击托盘菜单：显示小窗口。");
             showMiniWindow();
-        };
-        menu.Add(miniItem);
-        menu.Add(showItem);
-        menu.Add(new NativeMenuItemSeparator());
-        var exitItem = new NativeMenuItem(TranslationCatalog.Get("Tray_Quit"));
-        exitItem.Click += (_, _) =>
+        });
+
+        menu.Items.Add(miniItem);
+        menu.Items.Add(showItem);
+        menu.Items.Add(new MenuFlyoutSeparator());
+
+        var exitItem = new MenuFlyoutItem { Text = TranslationCatalog.Get("Tray_Quit") };
+        exitItem.Command = new TrayCommand(() =>
         {
             ApplicationLog.Current?.Info("Tray", "点击托盘菜单：退出应用。");
             exitApplication();
-        };
-        menu.Add(exitItem);
+        });
+        menu.Items.Add(exitItem);
         return menu;
     }
 
-    // 将原项目最常用的三个设备开关放入原生菜单，状态由最新快照回显。
     private static void AddDeviceControls(
-        NativeMenu menu,
+        MenuFlyout menu,
         BusinessSnapshot snapshot,
         IBrandManager manager,
         CommandDispatcher dispatcher)
@@ -65,7 +73,7 @@ internal static class TrayMenu
             AddToggle(menu, TranslationCatalog.Get("Feature_GameMode"), snapshot.Game.IsEnabled == true,
                 "托盘游戏模式",
                 dispatcher,
-                enabled => manager.SetGameModeAsync(enabled, CancellationToken.None));
+                (active, enabled) => active.SetGameModeAsync(enabled, CancellationToken.None));
         }
         if (presentation.VisibleControls.Contains("spatial-sound"))
         {
@@ -73,7 +81,7 @@ internal static class TrayMenu
             AddToggle(menu, TranslationCatalog.Get("Feature_SpatialSound"), enabled,
                 "托盘空间声场",
                 dispatcher,
-                value => manager.SetSpatialSoundAsync(value, CancellationToken.None));
+                (active, value) => active.SetSpatialSoundAsync(value, CancellationToken.None));
         }
         if (presentation.VisibleControls.Contains("dual-device"))
         {
@@ -81,13 +89,12 @@ internal static class TrayMenu
             AddToggle(menu, TranslationCatalog.Get("Feature_DualDevice"), enabled,
                 "托盘双设备",
                 dispatcher,
-                value => manager.SetDualDeviceAsync(value, CancellationToken.None));
+                (active, value) => active.SetDualDeviceAsync(value, CancellationToken.None));
         }
     }
 
-    // 按型号能力平铺 ANC 选项，并用最新设备状态标记当前模式。
     private static void AddNoiseModes(
-        NativeMenu menu,
+        MenuFlyout menu,
         BusinessSnapshot snapshot,
         IBrandManager manager,
         CommandDispatcher dispatcher)
@@ -97,22 +104,25 @@ internal static class TrayMenu
             .ToArray();
         foreach (var mode in modes)
         {
-            var item = new NativeMenuItem($"{(snapshot.Noise.Mode == mode ? "✓ " : string.Empty)}{DeviceText.NoiseModeName(mode)}");
-            item.Click += async (_, _) =>
+            var item = new ToggleMenuFlyoutItem
+            {
+                Text = DeviceText.NoiseModeName(mode),
+                IsChecked = snapshot.Noise.Mode == mode
+            };
+            item.Command = new TrayCommand(async () =>
             {
                 ApplicationLog.Current?.Info("Tray", $"点击托盘菜单降噪：mode={mode}。");
                 await dispatcher.RunAsync(
                     "托盘降噪",
                     active => active.SetNoiseCancellationAsync(mode, CancellationToken.None));
-            };
-            menu.Add(item);
+            });
+            menu.Items.Add(item);
         }
 
         if (modes.Length > 0)
-            menu.Add(new NativeMenuItemSeparator());
+            menu.Items.Add(new MenuFlyoutSeparator());
     }
 
-    // 将后端已经分组的 ANC 选项展开成托盘可使用的叶子模式。
     private static IEnumerable<NoiseMode> FlattenNoiseModes(IEnumerable<NoiseOptionModel> options)
     {
         foreach (var option in options)
@@ -125,21 +135,24 @@ internal static class TrayMenu
         }
     }
 
-    // 统一生成带勾选状态的异步菜单开关。
     private static void AddToggle(
-        NativeMenu menu,
+        MenuFlyout menu,
         string label,
         bool enabled,
         string operation,
         CommandDispatcher dispatcher,
-        Func<bool, Task<bool>> setEnabled)
+        Func<IBrandManager, bool, Task<bool>> setEnabled)
     {
-        var item = new NativeMenuItem($"{(enabled ? "✓ " : string.Empty)}{label}");
-        item.Click += async (_, _) =>
+        var item = new ToggleMenuFlyoutItem
+        {
+            Text = label,
+            IsChecked = enabled
+        };
+        item.Command = new TrayCommand(async () =>
         {
             ApplicationLog.Current?.Info("Tray", $"点击托盘菜单开关：label={label}，enabled={!enabled}。");
-            await dispatcher.RunAsync(operation, _ => setEnabled(!enabled));
-        };
-        menu.Add(item);
+            await dispatcher.RunAsync(operation, active => setEnabled(active, !enabled));
+        });
+        menu.Items.Add(item);
     }
 }

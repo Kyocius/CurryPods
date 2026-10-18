@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "OppoPodsManager (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "OppoPodsManager (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

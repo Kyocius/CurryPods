@@ -1,33 +1,37 @@
-using Avalonia.Input;
-using Avalonia.Interactivity;namespace OppoPodsManager.UI.MainWindow;public partial class MainWindow{    private void ShowPage(string page)
+using System.Threading;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Media;
+
+namespace OppoPodsManager.UI.MainWindow;
+
+public partial class MainWindow
+{
+    private void ShowPage(string page)
     {
         if (_currentPage != page)
         {
             _logManager?.Debug("UI", $"页面切换: {_currentPage} -> {page}");
             _currentPage = page;
         }
-        MainPanel.IsVisible = page == "home";
-        // 主页始终保留降噪卡片，未连接设备时由占位内容填充。
+
+        MainPanel.Visibility = page == "home" ? Visibility.Visible : Visibility.Collapsed;
         if (page == "home")
             HomeView?.SetAncPanelVisible(true);
-        EqPanel.IsVisible = page == "eq";
+
+        EqPanel.Visibility = page == "eq" ? Visibility.Visible : Visibility.Collapsed;
         if (page == "eq")
             _ = _commandDispatcher?.RunAsync("刷新自定义 EQ", manager => manager.RefreshCustomEqualizersAsync(CancellationToken.None));
-        DeviceInfoPanel.IsVisible = page == "deviceinfo";
-        PersonalPanel.IsVisible = page == "personal";
-        SettingsPanel.IsVisible = page == "settings";
-        LogPanel.IsVisible = page == "log";
-        AboutPanel.IsVisible = page == "about";
 
-        NavHome.Classes.Remove("selected");
-        NavEq.Classes.Remove("selected");
-        NavPersonal.Classes.Remove("selected");
-        NavSettings.Classes.Remove("selected");
+        DeviceInfoPanel.Visibility = page == "deviceinfo" ? Visibility.Visible : Visibility.Collapsed;
+        PersonalPanel.Visibility = page == "personal" ? Visibility.Visible : Visibility.Collapsed;
+        SettingsPanel.Visibility = page == "settings" ? Visibility.Visible : Visibility.Collapsed;
+        LogPanel.Visibility = page == "log" ? Visibility.Visible : Visibility.Collapsed;
+        AboutPanel.Visibility = page == "about" ? Visibility.Visible : Visibility.Collapsed;
 
-        if (page == "home") NavHome.Classes.Add("selected");
-        else if (page == "eq") NavEq.Classes.Add("selected");
-        else if (page == "personal") NavPersonal.Classes.Add("selected");
-        else NavSettings.Classes.Add("selected");
+        UpdateNavHighlight(NavHome, page == "home");
+        UpdateNavHighlight(NavEq, page == "eq");
+        UpdateNavHighlight(NavPersonal, page == "personal");
+        UpdateNavHighlight(NavSettings, page == "settings");
 
         if (page != "log")
             LogView.Stop();
@@ -36,15 +40,22 @@ using Avalonia.Interactivity;namespace OppoPodsManager.UI.MainWindow;public part
             EqView?.ApplySnapshot(_frontendState.Snapshot);
         if (page == "log") LogView.Start();
     }
-    private void BtnViewLog_Click(object? s, Avalonia.Interactivity.RoutedEventArgs e)
+
+    private static void UpdateNavHighlight(Microsoft.UI.Xaml.Controls.Button button, bool selected)
+    {
+        button.Background = selected ? AppPalette.BrushPrimary : AppPalette.BrushTransparent;
+        button.Foreground = selected ? AppPalette.BrushWhitePure : AppPalette.BrushGray;
+    }
+
+    private void BtnViewLog_Click(object sender, RoutedEventArgs e)
     {
         _logManager?.Debug("UI", "日志面板: 打开");
         ShowPage("log");
     }
-    private void NavHome_Click(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ShowPage("home");
-    private void NavEq_Click(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ShowPage("eq");
-    private void NavPersonal_Click(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ShowPage("personal");
-    private void NavSettings_Click(object? s, Avalonia.Interactivity.RoutedEventArgs e) => ShowPage("settings");
-    private void About_Click(object? s, RoutedEventArgs e) => ShowPage("about");
 
+    private void NavHome_Click(object sender, RoutedEventArgs e) => ShowPage("home");
+    private void NavEq_Click(object sender, RoutedEventArgs e) => ShowPage("eq");
+    private void NavPersonal_Click(object sender, RoutedEventArgs e) => ShowPage("personal");
+    private void NavSettings_Click(object sender, RoutedEventArgs e) => ShowPage("settings");
+    private void About_Click(object sender, RoutedEventArgs e) => ShowPage("about");
 }

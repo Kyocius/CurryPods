@@ -1,9 +1,8 @@
-# OPPO Pods Manager (Windows / Linux)
+# CurryPods (Windows App SDK)
 
 [中文](https://github.com/Zhaoyi-ya/OppoPodsManager/blob/main/README.md) | [English](https://github.com/Zhaoyi-ya/OppoPodsManager/blob/main/README_EN.md)
 
-> **📦 Project archived**: This repository is no longer developed or maintained as of 2026-09-30.
-> The existing code is archived as is for anyone to read. See the [archive notice](ARCHIVE_EN.md) for details.
+> This branch is migrating the original Avalonia app to Windows App SDK / WinUI 3 and renaming it CurryPods. The original archive notice remains in [ARCHIVE_EN.md](ARCHIVE_EN.md).
 
 ---
 
@@ -66,7 +65,7 @@ only shows what your earbuds actually support.
 - **Independent toggles**: low-battery alerts and connection pop-ups can be turned off separately; pop-up duration is adjustable (3–8 s)
 
 ### Desktop Experience
-- **System tray**: left-click toggles the window, right-click opens a menu, hover shows live battery
+- **System tray**: single-click opens the status window, double-click restores the main window, right-click opens a menu, hover shows live battery
 - **Minimize to tray**: closing the window minimizes to tray instead of quitting (optional)
 - **Auto-start**: launch with the system (optional)
 - **Auto-reconnect**: reconnects automatically after a disconnection
@@ -99,9 +98,9 @@ search and pick your model under **Settings → Device Model**.
 ## Requirements
 
 - **Windows**: Windows 10 version 2004 (build 19041) or later, 64-bit (x64 / arm64)
-- **Linux**: x64, BlueZ via D-Bus (X11 / XWayland), plus `bluetoothctl` and `libbluetooth`
+- This WinUI 3 project builds for Windows only. Legacy Linux communication sources are excluded from compilation.
 - **Hardware**: Bluetooth adapter + paired earbuds
-- **Dependencies**: Self-contained (NativeAOT) builds are ready to use with no .NET install. Framework-dependent builds require the .NET Runtime 10.0.
+- **Build tools**: .NET SDK 10 and winapp CLI 0.6 or later. The target framework is `net10.0-windows10.0.26100.0`.
 
 ---
 
@@ -192,33 +191,28 @@ Turn each one off under **Personalization → Notifications**; you can also adju
 If "minimize to tray" is enabled, closing the window just hides it to the tray. Right-click the tray icon to quit.
 
 **Q: Does it work on Linux?**
-Yes. Linux talks to the earbuds over BlueZ (D-Bus) and covers the same feature set as Windows;
-the frosted-glass window effect is Windows-only.
+The current CurryPods WinUI 3 project supports Windows only. Legacy Linux support belongs to the Avalonia version.
+
 
 ---
 
 ## Building from Source
 
-Requires **.NET SDK 10.0** or later.
+Install .NET SDK 10 and [winapp CLI](https://learn.microsoft.com/windows/apps/get-started/start-here?tabs=command-line), then run from the project root:
 
-```bash
-git clone https://github.com/Zhaoyi-ya/OppoPodsManager.git
-cd OppoPodsManager
-
-# Debug build (the Windows backend is selected by RID or build property)
-dotnet build -c Debug
-
-# Publish (NativeAOT self-contained single file; no .NET needed on the target machine)
-dotnet publish -c Release -r win-x64      # Windows x64
-dotnet publish -c Release -r linux-x64    # Linux x64
+```powershell
+winapp run OppoPodsManager.csproj --arch x64
+# Build and register without launching
+winapp run OppoPodsManager.csproj --arch x64 --no-launch
+# Launch the existing build
+winapp run OppoPodsManager.csproj --arch x64 --no-build --detach
 ```
 
-The backend switches by platform automatically: Windows uses the WinRT Bluetooth APIs
-(`net10.0-windows10.0.19041.0`), Linux uses BlueZ over D-Bus (`net10.0` + `Tmds.DBus`).
-The same codebase serves both via MSBuild conditionals — no manual code changes needed.
+Replace `x64` with `arm64` when needed. The executable is `CurryPods.exe`. The project filename, namespaces, MSIX identity and existing settings/image directories retain `OppoPodsManager` for compatibility with existing data and package upgrades.
+
+Windows App SDK patterns reference [Bili.Copilot](https://github.com/Richasy/Bili.Copilot). Native tray menu entries use `ICommand`; a single click opens the status window and a double click restores the main window. Hiding preserves page state. Acrylic/Mica switches update SystemBackdrop in place. Closing releases subscriptions, timers and visual references.
 
 ---
-
 ## Maintainers
 
 - [@Zhaoyi-ya](https://github.com/Zhaoyi-ya)

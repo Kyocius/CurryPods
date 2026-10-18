@@ -1,6 +1,8 @@
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 
 namespace OppoPodsManager.Assets.VisualAssets;
 
@@ -20,10 +22,10 @@ public static class EarphoneImageProvider
     private static readonly IReadOnlyDictionary<EarphoneSlot, string> DefaultAssets =
         new Dictionary<EarphoneSlot, string>
         {
-            [EarphoneSlot.HomeLeft] = "avares://OppoPodsManager/Assets/Oplus/Images/official_left.png",
-            [EarphoneSlot.HomeRight] = "avares://OppoPodsManager/Assets/Oplus/Images/official_right.png",
-            [EarphoneSlot.Case] = "avares://OppoPodsManager/Assets/Oplus/Images/official_case.png",
-            [EarphoneSlot.Headphone] = "avares://OppoPodsManager/Assets/Oplus/Images/official_headphone.png"
+            [EarphoneSlot.HomeLeft] = "ms-appx:///Assets/Oplus/Images/official_left.png",
+            [EarphoneSlot.HomeRight] = "ms-appx:///Assets/Oplus/Images/official_right.png",
+            [EarphoneSlot.Case] = "ms-appx:///Assets/Oplus/Images/official_case.png",
+            [EarphoneSlot.Headphone] = "ms-appx:///Assets/Oplus/Images/official_headphone.png"
         };
 
     // 保留原应用的文件名，用户迁移后无需重新选择图片。
@@ -42,8 +44,8 @@ public static class EarphoneImageProvider
         "OppoPodsManager",
         "earphone");
 
-    // 返回独立位图实例，避免窗口关闭时影响其他窗口持有的图片。
-    public static Bitmap? GetBitmap(EarphoneSlot slot)
+    // 返回独立图片源实例，避免窗口关闭时影响其他窗口持有的图片。
+    public static ImageSource? GetBitmap(EarphoneSlot slot)
     {
         foreach (var fileName in CustomNames[slot])
         {
@@ -53,7 +55,7 @@ public static class EarphoneImageProvider
 
             try
             {
-                return new Bitmap(path);
+                return new BitmapImage(new Uri(path));
             }
             catch
             {
@@ -62,8 +64,7 @@ public static class EarphoneImageProvider
 
         try
         {
-            using var stream = AssetLoader.Open(new Uri(DefaultAssets[slot]));
-            return new Bitmap(stream);
+            return new BitmapImage(new Uri(DefaultAssets[slot]));
         }
         catch
         {
