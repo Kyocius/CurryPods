@@ -307,5 +307,16 @@
   "Anc_Level": "Stärke der Geräuschunterdrückung",
   "Feature_Unsupported": "Für dieses Gerät sind keine Funktionsschalter verfügbar",
   "Personal_PreviewToast": "Benachrichtigung anzeigen",
-  "Toast_Connected": "Verbunden"
+  "Toast_Connected": "Verbunden",
+  "Feature_DualDevice_Description": "Kopfhörer mit zwei Geräten verbunden halten.",
+  "Feature_GameMode_Description": "Audioverzögerung beim Spielen verringern.",
+  "Feature_LongPowerMode_Description": "Betriebsmodus für eine längere Akkulaufzeit anpassen.",
+  "Feature_WearDetection_Description": "Wiedergabe abhängig vom Tragezustand steuern.",
+  "Feature_SpineHealth_Description": "Haltungserinnerungen der Kopfhörer verwenden.",
+  "Feature_SpatialSound_Description": "Räumliche Klangwirkung anpassen.",
+  "Feature_GameSound_Description": "Für Spiele ausgelegte Klangeffekte verwenden.",
+  "Feature_BassEngine_Description": "Basswiedergabe verstärken.",
+  "Feature_VocalEnhance_Description": "Stimmen und Gesang hervorheben.",
+  "Feature_HearingEnhance_Description": "Personalisierte Hörverbesserung verwenden.",
+  "Common_Close": "Schließen"
 }

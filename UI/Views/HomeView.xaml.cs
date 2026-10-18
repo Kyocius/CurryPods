@@ -113,7 +113,7 @@ public partial class HomeView : UserControl, IPageView
             {
                 snapshot.Wear.Left == EarWearState.Unknown ? null : DeviceText.WearState(snapshot.Wear.Left),
                 snapshot.Wear.Right == EarWearState.Unknown ? null : DeviceText.WearState(snapshot.Wear.Right)
-            }.Where(text => !string.IsNullOrWhiteSpace(text)));
+            }.Where(text => !string.IsNullOrWhiteSpace(text)).Distinct());
         WearStatus.Visibility = !string.IsNullOrWhiteSpace(WearStatus.Text) ? Visibility.Visible : Visibility.Collapsed;
 
         ApplyNextFeatureState(snapshot);
@@ -127,7 +127,10 @@ public partial class HomeView : UserControl, IPageView
     private void UpdateNextConnectionStatus(BusinessSnapshot snapshot)
     {
         StatusDot.Fill = snapshot.IsConnected ? AppPalette.BrushGreen : AppPalette.BrushRed;
-        StatusText.Foreground = snapshot.IsConnected ? AppPalette.BrushLightGreen : AppPalette.BrushLightRed;
+        if (snapshot.IsConnected)
+            StatusText.ClearValue(TextBlock.ForegroundProperty);
+        else
+            StatusText.Foreground = AppPalette.BrushLightRed;
 
         if (!snapshot.IsConnected)
         {

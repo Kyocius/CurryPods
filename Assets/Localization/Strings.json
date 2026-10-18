@@ -307,5 +307,16 @@
   "Anc_Level": "降噪强度",
   "Feature_Unsupported": "此设备没有可用的功能开关",
   "Personal_PreviewToast": "预览通知",
-  "Toast_Connected": "已连接"
+  "Toast_Connected": "已连接",
+  "Feature_DualDevice_Description": "让耳机同时连接两台设备。",
+  "Feature_GameMode_Description": "降低游戏时的音频延迟。",
+  "Feature_LongPowerMode_Description": "调整耳机工作模式，延长续航时间。",
+  "Feature_WearDetection_Description": "根据耳机的佩戴状态控制播放。",
+  "Feature_SpineHealth_Description": "使用耳机提供的颈椎健康提醒。",
+  "Feature_SpatialSound_Description": "调整声音的空间感。",
+  "Feature_GameSound_Description": "使用适合游戏的声音效果。",
+  "Feature_BassEngine_Description": "增强低频表现。",
+  "Feature_VocalEnhance_Description": "突出语音与人声。",
+  "Feature_HearingEnhance_Description": "使用耳机的个性化听感增强。",
+  "Common_Close": "关闭"
 }

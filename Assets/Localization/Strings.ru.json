@@ -307,5 +307,16 @@
   "Anc_Level": "Уровень шумоподавления",
   "Feature_Unsupported": "Для этого устройства нет доступных переключателей функций",
   "Personal_PreviewToast": "Предпросмотр уведомления",
-  "Toast_Connected": "Подключено"
+  "Toast_Connected": "Подключено",
+  "Feature_DualDevice_Description": "Поддерживать подключение наушников к двум устройствам.",
+  "Feature_GameMode_Description": "Снизить задержку звука в играх.",
+  "Feature_LongPowerMode_Description": "Изменить режим работы для увеличения времени работы.",
+  "Feature_WearDetection_Description": "Управлять воспроизведением в зависимости от ношения наушников.",
+  "Feature_SpineHealth_Description": "Использовать напоминания наушников об осанке.",
+  "Feature_SpatialSound_Description": "Изменить пространственное звучание.",
+  "Feature_GameSound_Description": "Использовать звуковые эффекты для игр.",
+  "Feature_BassEngine_Description": "Усилить низкие частоты.",
+  "Feature_VocalEnhance_Description": "Выделить речь и вокал.",
+  "Feature_HearingEnhance_Description": "Использовать персональное улучшение слухового восприятия.",
+  "Common_Close": "Закрыть"
 }

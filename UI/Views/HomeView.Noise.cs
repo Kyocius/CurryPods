@@ -24,7 +24,7 @@ public partial class HomeView
         _noiseOptions = options;
         AncModes.Items.Clear();
         foreach (var option in options)
-            AncModes.Items.Add(new RadioButton
+            AncModes.Items.Add(new ComboBoxItem
             {
                 Content = DeviceProfileLoader.AncLabel(option.Key),
                 Tag = option,
@@ -51,7 +51,7 @@ public partial class HomeView
 
     private void AncModes_SelectionChanged(object sender, SelectionChangedEventArgs args)
     {
-        if (_syncingNoise || _realClose || AncModes.SelectedItem is not RadioButton { Tag: NoiseOptionModel option })
+        if (_syncingNoise || _realClose || AncModes.SelectedItem is not ComboBoxItem { Tag: NoiseOptionModel option })
             return;
         var target = option.Children.Count == 0 ? option.Key
             : _lastNoiseLevels.TryGetValue(option.Key, out var last) && option.Children.Any(child => child.Key == last)
@@ -66,7 +66,7 @@ public partial class HomeView
     {
         if (_syncingNoise || _realClose || AncLevels.SelectedItem is not ComboBoxItem { Tag: NoiseOptionModel level })
             return;
-        if (AncModes.SelectedItem is RadioButton { Tag: NoiseOptionModel parent })
+        if (AncModes.SelectedItem is ComboBoxItem { Tag: NoiseOptionModel parent })
             _lastNoiseLevels[parent.Key] = level.Key;
         _ = SetNoiseModeAsync(level.Key);
     }
@@ -99,7 +99,7 @@ public partial class HomeView
             BuildNoiseOptions(presentation!.NoiseOptions);
             var key = presentation.CurrentNoiseModeKey;
             var option = _noiseOptions.FirstOrDefault(option => option.Key == key || option.Children.Any(child => child.Key == key));
-            AncModes.SelectedItem = AncModes.Items.OfType<RadioButton>().FirstOrDefault(item => ReferenceEquals(item.Tag, option));
+            AncModes.SelectedItem = AncModes.Items.OfType<ComboBoxItem>().FirstOrDefault(item => ReferenceEquals(item.Tag, option));
             SetNoiseLevels(option, key);
             if (option is not null && option.Children.Any(child => child.Key == key))
                 _lastNoiseLevels[option.Key] = key;

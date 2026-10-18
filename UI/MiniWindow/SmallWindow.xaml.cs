@@ -9,8 +9,8 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
-using Path = Microsoft.UI.Xaml.Shapes.Path;
+using System.Runtime.InteropServices;
+
 using WinRT.Interop;
 using Windows.Graphics;
 using OppoPodsManager.Assets.Localization;
@@ -36,18 +36,13 @@ public partial class SmallWindow : Window
     private IDisposable? _interactiveSurface;
     private AppWindow? _appWindow;
 
-    private static readonly SolidColorBrush BatteryColorWhite  = new(Colors.White);
     private static readonly SolidColorBrush BatteryColorYellow = new(ColorHelper.FromArgb(0xFF, 0xFF, 0xCC, 0x00));
     private static readonly SolidColorBrush BatteryColorRed    = new(ColorHelper.FromArgb(0xFF, 0xFF, 0x3B, 0x30));
 
-    private readonly Dictionary<string, (Border bg, Path icon, TextBlock label)> _ancMainButtons = new();
-    private readonly Dictionary<string, (Button btn, Border bg)> _ancSubButtons = new();
-    private readonly Dictionary<string, string> _ancChildToMain = new();
-
-    private List<NoiseOptionModel> _ancOptions = new();
-    private string _ancMain = "", _ancLevel = "";
-    private string? _ancBuiltForModel;
-    private string _ancSubSignature = "";
+    private string _noiseSignature = string.Empty;
+    private bool _syncingNoise;
+    private DisplayArea? _displayArea;
+    private bool _positioning;
     private bool _refreshPending;
     private bool _isClosed;
     private bool _gameSoundCommandPending;
@@ -95,7 +90,7 @@ public partial class SmallWindow : Window
             LeftImage.Source = null;
             RightImage.Source = null;
             CaseImage.Source = null;
-            BgImage.Source = null;
+            RootGrid.Loaded -= RootGrid_Loaded;
             SystemBackdrop = null;
             Content = null;
         };
@@ -110,16 +105,16 @@ public partial class SmallWindow : Window
         };
 
         // 功能复选框接线
-        WireCheckBox(CbDualDevice);
-        WireCheckBox(CbGame);
-        WireCheckBox(CbLongPower);
-        WireCheckBox(CbWearDetection);
-        WireCheckBox(CbSpineHealth);
-        WireCheckBox(CbSpatial);
-        WireCheckBox(CbGameSound);
-        WireCheckBox(CbBassEngine);
-        WireCheckBox(CbVocalEnhance);
-        WireCheckBox(CbHearingEnhance);
+        WireToggleSwitch(CbDualDevice);
+        WireToggleSwitch(CbGame);
+        WireToggleSwitch(CbLongPower);
+        WireToggleSwitch(CbWearDetection);
+        WireToggleSwitch(CbSpineHealth);
+        WireToggleSwitch(CbSpatial);
+        WireToggleSwitch(CbGameSound);
+        WireToggleSwitch(CbBassEngine);
+        WireToggleSwitch(CbVocalEnhance);
+        WireToggleSwitch(CbHearingEnhance);
 
         LoadEarphoneImages();
     }
@@ -134,24 +129,64 @@ public partial class SmallWindow : Window
             presenter.IsResizable = false;
             presenter.IsMaximizable = false;
             presenter.IsMinimizable = false;
-            presenter.SetBorderAndTitleBar(false, false);
+            presenter.SetBorderAndTitleBar(true, false);
             presenter.IsAlwaysOnTop = true;
         }
 
-        _appWindow.Resize(new SizeInt32(320, 440));
-
-        var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
-        if (displayArea != null)
-        {
-            var wa = displayArea.WorkArea;
-            _appWindow.Move(new PointInt32(wa.X + wa.Width - 330, wa.Y + wa.Height - 450));
-        }
+        _appWindow.IsShownInSwitchers = false;
+        GetCursorPos(out var cursor);
+        _displayArea = DisplayArea.GetFromPoint(new PointInt32(cursor.X, cursor.Y), DisplayAreaFallback.Primary);
+        if (_displayArea is { } display)
+            _appWindow.Move(new PointInt32(display.WorkArea.X + display.WorkArea.Width / 2, display.WorkArea.Y + display.WorkArea.Height / 2));
+        RefreshAppearance();
+        RootGrid.Loaded += RootGrid_Loaded;
     }
 
-    private void WireCheckBox(CheckBox cb)
+    private void RootGrid_Loaded(object sender, RoutedEventArgs args) => PositionWindow();
+
+    private void PositionWindow()
     {
-        cb.Checked += FeatureCheck_Changed;
-        cb.Unchecked += FeatureCheck_Changed;
+        if (_isClosed || _positioning || _appWindow is null || _displayArea is null)
+            return;
+        _positioning = true;
+        try
+        {
+            var hwnd = WindowNative.GetWindowHandle(this);
+            var scale = Math.Max(96u, GetDpiForWindow(hwnd)) / 96d;
+            var area = _displayArea.WorkArea;
+            var gap = (int)Math.Round(12 * scale);
+            RootGrid.Width = Math.Min(360, (area.Width - 2 * gap) / scale);
+            RootGrid.MaxHeight = Math.Min(560, (area.Height - 2 * gap) / scale);
+            RootGrid.Measure(new Windows.Foundation.Size(RootGrid.Width, RootGrid.MaxHeight));
+            var width = (int)Math.Ceiling(RootGrid.DesiredSize.Width * scale);
+            var height = (int)Math.Ceiling(RootGrid.DesiredSize.Height * scale);
+            GetClientRect(hwnd, out var client);
+            var outer = _appWindow.Size;
+            _appWindow.Resize(new SizeInt32(width + outer.Width - client.Right, height + outer.Height - client.Bottom));
+            outer = _appWindow.Size;
+            _appWindow.Move(new PointInt32(area.X + area.Width - outer.Width - gap, area.Y + area.Height - outer.Height - gap));
+        }
+        finally { _positioning = false; }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(nint hwnd);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetClientRect(nint hwnd, out NativeRect rectangle);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out NativePoint point);
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint { public int X, Y; }
+    private void WireToggleSwitch(ToggleSwitch cb)
+    {
+        cb.Toggled += FeatureCheck_Changed;
+
     }
 
     private void OnNextStateChanged(object? sender, BusinessSnapshot snapshot)
@@ -168,6 +203,8 @@ public partial class SmallWindow : Window
         SetNextBattery(RightLabel, RightChargeBolt, snapshot.RightBattery);
         SetNextBattery(CaseLabel, CaseChargeBolt, snapshot.CaseBattery);
         Title = DeviceText.DeviceName(snapshot.Identity?.ModelName, snapshot.DeviceName);
+        DeviceTitle.Text = Title;
+        ConnectionStatus.Text = TranslationCatalog.Get(snapshot.IsConnected ? "Toast_Connected" : "Status_Disconnected");
         var manager = _controlManager?.ActiveManager ?? _nextManager;
         if (manager is not null)
         {
@@ -175,10 +212,7 @@ public partial class SmallWindow : Window
             AncCard.Visibility = (snapshot.IsConnected && presentation.SupportsNoiseCancellation) ? Visibility.Visible : Visibility.Collapsed;
             if (AncCard.Visibility == Visibility.Visible)
             {
-                BuildNextAncUi(presentation);
-                if (snapshot.Noise.Mode != NoiseMode.Unknown)
-                    SyncAncFromState(presentation.CurrentNoiseModeKey);
-                HighlightAnc();
+                SyncNoiseOptions(presentation);
             }
         }
         else
@@ -186,6 +220,7 @@ public partial class SmallWindow : Window
             AncCard.Visibility = Visibility.Collapsed;
         }
         ApplyNextFeatureState(snapshot);
+        PositionWindow();
         ApplicationLog.Current?.Debug("UI", $"小窗已应用快照：revision={snapshot.Revision}，connected={snapshot.IsConnected}。");
     }
 
@@ -194,14 +229,15 @@ public partial class SmallWindow : Window
         if (battery is { } value)
         {
             label.Text = $"{value.Percent}%";
-            label.Foreground = value.Percent < 10 ? BatteryColorRed
-                              : value.Percent <= 20 ? BatteryColorYellow
-                              : BatteryColorWhite;
+            if (value.Percent <= 20)
+                label.Foreground = value.Percent < 10 ? BatteryColorRed : BatteryColorYellow;
+            else
+                label.ClearValue(TextBlock.ForegroundProperty);
         }
         else
         {
             label.Text = "–%";
-            label.Foreground = BatteryColorWhite;
+            label.ClearValue(TextBlock.ForegroundProperty);
         }
         bolt.Visibility = (battery?.IsCharging == true) ? Visibility.Visible : Visibility.Collapsed;
     }
@@ -261,15 +297,15 @@ public partial class SmallWindow : Window
         SetFeatureEnabled(CbGame, controlEnabledStates, "game-mode");
     }
 
-    private void SetNextFeatureCheck(CheckBox box, bool visible, IReadOnlyDictionary<string, bool> states, string key)
+    private void SetNextFeatureCheck(ToggleSwitch box, bool visible, IReadOnlyDictionary<string, bool> states, string key)
     {
         box.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-        if (!states.TryGetValue(key, out var enabled) || box.IsChecked == enabled)
+        if (!states.TryGetValue(key, out var enabled) || box.IsOn == enabled)
             return;
         _syncingFeatures = true;
         try
         {
-            box.IsChecked = enabled;
+            box.IsOn = enabled;
         }
         finally
         {
@@ -277,7 +313,7 @@ public partial class SmallWindow : Window
         }
     }
 
-    private static void SetFeatureEnabled(CheckBox box, IReadOnlyDictionary<string, bool> states, string key)
+    private static void SetFeatureEnabled(ToggleSwitch box, IReadOnlyDictionary<string, bool> states, string key)
     {
         var enabled = !states.TryGetValue(key, out var value) || value;
         if (box.IsEnabled != enabled)
@@ -286,11 +322,11 @@ public partial class SmallWindow : Window
 
     private void FeatureCheck_Changed(object sender, RoutedEventArgs e)
     {
-        if (_syncingFeatures)
+        if (_syncingFeatures || _isClosed)
             return;
-        if (sender is not CheckBox box || box.Tag is not string key || box.IsChecked is not { } enabled)
+        if (sender is not ToggleSwitch box || box.Tag is not string key)
             return;
-        SendFeatureCommand(key, enabled);
+        SendFeatureCommand(key, box.IsOn);
     }
 
     private void SendFeatureCommand(string key, bool enabled)
@@ -348,10 +384,20 @@ public partial class SmallWindow : Window
 
     public void RefreshAppearance()
     {
-        if (_isClosed)
-            return;
+        if (_isClosed) return;
+        RootGrid.RequestedTheme = _nextSettings?.Current.Theme switch
+        {
+            "Dark" => ElementTheme.Dark,
+            "Light" => ElementTheme.Light,
+            _ => ElementTheme.Default
+        };
+        var dark = RootGrid.RequestedTheme == ElementTheme.Dark
+            || (RootGrid.RequestedTheme == ElementTheme.Default && App.CurrentWindow?.Content is FrameworkElement owner && owner.ActualTheme == ElementTheme.Dark) ? 1 : 0;
+        var rounded = 2;
+        var hwnd = WindowNative.GetWindowHandle(this);
+        DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));
+        DwmSetWindowAttribute(hwnd, 33, ref rounded, sizeof(int));
     }
-
     private void LoadEarphoneImages()
     {
         LeftImage.Source = EarphoneImageProvider.GetBitmap(EarphoneSlot.HomeLeft);
@@ -364,7 +410,7 @@ public partial class SmallWindow : Window
     private void CustomClose_Click(object sender, RoutedEventArgs e)
     {
         ApplicationLog.Current?.Debug("UI", "SmallWindow: 点击自定义关闭按钮");
-        _appWindow?.Hide();
+        Close();
     }
 
     public void SafeRefresh()
@@ -384,249 +430,40 @@ public partial class SmallWindow : Window
         });
     }
 
-    private static Geometry ParseGeometry(string pathData)
+    private void SyncNoiseOptions(BrandPresentation presentation)
     {
-        return ((Path)Microsoft.UI.Xaml.Markup.XamlReader.Load(
-            $"<Path xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Data=\"{pathData}\"/>")).Data;
-    }
-
-    private void BuildNextAncUi(BrandPresentation presentation)
-    {
-        var modelKey = presentation.ModelName + "|"
-            + string.Join("|", presentation.NoiseOptions.Select(option =>
-                $"{option.Key}:{string.Join(',', option.Children.Select(child => child.Key))}"));
-        if (_ancBuiltForModel == modelKey)
-            return;
-
-        BuildAncUi(modelKey, presentation.NoiseOptions);
-    }
-
-    private void BuildAncUi(string modelKey, IReadOnlyList<NoiseOptionModel> options)
-    {
-        if (_ancBuiltForModel == modelKey) return;
-        _ancBuiltForModel = modelKey;
-        _ancOptions = options.ToList();
-
-        _ancMainButtons.Clear();
-        _ancChildToMain.Clear();
-        AncMainRow.Children.Clear();
-        AncMainRow.ColumnDefinitions.Clear();
-        AncSubRow.Children.Clear();
-        AncSubRow.ColumnDefinitions.Clear();
-        _ancSubButtons.Clear();
-        _ancSubSignature = "";
-        AncSubRow.Visibility = Visibility.Collapsed;
-
-        var segmentGrid = new Grid();
-        var capsule = new Border
+        var signature = string.Join("|", presentation.NoiseOptions.SelectMany(option => option.Children.Count > 0 ? option.Children : new[] { option })
+            .Select(option => option.Key + ":" + DeviceProfileLoader.AncLabel(option.Key)));
+        _syncingNoise = true;
+        try
         {
-            CornerRadius = new CornerRadius(9),
-            Background = AppPalette.BrushCircleGray,
-            Padding = new Thickness(2),
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Child = segmentGrid
-        };
-
-        for (int i = 0; i < _ancOptions.Count; i++)
-        {
-            var opt = _ancOptions[i];
-            var corner = _ancOptions.Count == 1
-                ? new CornerRadius(7)
-                : i == 0 ? new CornerRadius(7, 0, 0, 7)
-                : i == _ancOptions.Count - 1 ? new CornerRadius(0, 7, 7, 0)
-                : new CornerRadius(0);
-            var (segment, icon, label) = MakeAncSegmentButton(opt, corner, 30, 15, 13);
-            segmentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Grid.SetColumn(segment, i);
-            segmentGrid.Children.Add(segment);
-            _ancMainButtons[opt.Key] = (segment, icon, label);
-            foreach (var child in opt.Children) _ancChildToMain[child.Key] = opt.Key;
-        }
-
-        AncMainRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        AncMainRow.Children.Add(capsule);
-    }
-
-    private void PopulateAncSub(NoiseOptionModel container)
-    {
-        var signature = container.Key + ":" + string.Join("|", container.Children.Select(c => $"{c.Key};{DeviceProfileLoader.AncLabel(c.Key)}"));
-        if (_ancSubSignature == signature)
-            return;
-
-        foreach (var (_, (btn, _)) in _ancSubButtons)
-            btn.Click -= AncSub_Click;
-
-        AncSubRow.Children.Clear();
-        AncSubRow.ColumnDefinitions.Clear();
-        _ancSubButtons.Clear();
-        _ancSubSignature = signature;
-
-        int col = 0;
-        for (int i = 0; i < container.Children.Count; i++)
-        {
-            var child = container.Children[i];
-            if (i > 0)
+            if (_noiseSignature != signature)
             {
-                AncSubRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-                var sep = new Border { Width = 1, Background = AppPalette.BrushGray, Opacity = 0.12 };
-                Grid.SetColumn(sep, col);
-                AncSubRow.Children.Add(sep);
-                col++;
+                _noiseSignature = signature;
+                NoiseModes.Items.Clear();
+                foreach (var parent in presentation.NoiseOptions)
+                    foreach (var option in parent.Children.Count > 0 ? parent.Children : new[] { parent })
+                        NoiseModes.Items.Add(new ComboBoxItem
+                        {
+                            Content = parent.Children.Count > 0 ? DeviceProfileLoader.AncLabel(parent.Key) + " · " + DeviceProfileLoader.AncLabel(option.Key) : DeviceProfileLoader.AncLabel(option.Key),
+                            Tag = option.Key
+                        });
             }
-            var corner = container.Children.Count == 1 ? new CornerRadius(5)
-                : i == 0 ? new CornerRadius(5, 0, 0, 5)
-                : i == container.Children.Count - 1 ? new CornerRadius(0, 5, 5, 0)
-                : new CornerRadius(0);
-            var btn = new Button
-            {
-                Content = DeviceProfileLoader.AncLabel(child.Key), Tag = child, MinWidth = 60, Height = 26,
-                BorderThickness = new Thickness(0), Padding = new Thickness(8, 0, 8, 0),
-                Background = AppPalette.BrushTransparent,
-                Foreground = AppPalette.BrushGray, FontSize = 13,
-                HorizontalContentAlignment = HorizontalAlignment.Center
-            };
-            btn.Click += AncSub_Click;
-            var bg = new Border { CornerRadius = corner, Padding = new Thickness(0), Background = AppPalette.BrushTransparent, Child = btn };
-            AncSubRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-            Grid.SetColumn(bg, col);
-            AncSubRow.Children.Add(bg);
-            _ancSubButtons[child.Key] = (btn, bg);
-            col++;
+            NoiseModes.SelectedItem = NoiseModes.Items.OfType<ComboBoxItem>().FirstOrDefault(item => item.Tag is string key && key == presentation.CurrentNoiseModeKey);
         }
+        finally { _syncingNoise = false; }
+    }
+
+    private async void NoiseModes_SelectionChanged(object sender, SelectionChangedEventArgs args)
+    {
+        if (_syncingNoise || _isClosed || NoiseModes.SelectedItem is not ComboBoxItem { Tag: string key }) return;
+        await (_commandDispatcher?.RunAsync("小窗降噪模式", manager => manager.SetNoiseCancellationByKeyAsync(key, CancellationToken.None)) ?? Task.FromResult(false));
+        if (!_isClosed && _frontendState is not null) ApplyNextSnapshot(_frontendState.Snapshot);
     }
 
     internal void RefreshAncLabels()
     {
-        foreach (var (key, (_, _, label)) in _ancMainButtons)
-        {
-            var t = DeviceProfileLoader.AncLabel(key);
-            label.Text = t;
-            label.FontSize = t.Length > 8 ? 11 : 13;
-        }
-        foreach (var (key, (btn, _)) in _ancSubButtons)
-            btn.Content = DeviceProfileLoader.AncLabel(key);
-    }
-
-    private (Border bg, Path icon, TextBlock label) MakeAncSegmentButton(
-        NoiseOptionModel opt, CornerRadius corner, int height, int iconSize, int fontSize)
-    {
-        var icon = new Path
-        {
-            Data = ParseGeometry(AncIcons.GetAncIcon(opt.Key)),
-            Width = iconSize, Height = iconSize, Fill = AppPalette.BrushGray,
-            Stretch = Stretch.Uniform, VerticalAlignment = VerticalAlignment.Center
-        };
-        var labelText = DeviceProfileLoader.AncLabel(opt.Key);
-        var label = new TextBlock
-        {
-            Text = labelText,
-            FontSize = labelText.Length > 8 ? Math.Max(10, fontSize - 2) : fontSize,
-            Foreground = AppPalette.BrushGray,
-            TextAlignment = TextAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-
-        var content = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 4,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        content.Children.Add(icon);
-        content.Children.Add(label);
-
-        var btn = new Button
-        {
-            Content = content, Tag = opt,
-            Background = AppPalette.BrushTransparent, BorderThickness = new Thickness(0),
-            Padding = new Thickness(12, 0, 12, 0), Height = height,
-            Foreground = AppPalette.BrushGray,
-            HorizontalContentAlignment = HorizontalAlignment.Center
-        };
-        btn.Click += (_, _) =>
-        {
-            if (btn.Tag is NoiseOptionModel o) SwitchAncMain(o);
-        };
-
-        var bg = new Border { CornerRadius = corner, Background = AppPalette.BrushTransparent, Child = btn };
-        return (bg, icon, label);
-    }
-
-    private void AncSub_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncSub(opt);
-    }
-
-    private void HighlightAnc()
-    {
-        var circleGray = AppPalette.CircleGray;
-        var accent = AppPalette.Accent;
-        foreach (var (key, (bg, icon, label)) in _ancMainButtons)
-        {
-            var active = key == _ancMain;
-            bg.Background = active ? accent : AppPalette.BrushTransparent;
-            icon.Fill = active ? AppPalette.BrushWhitePure : AppPalette.BrushGray;
-            label.Foreground = active ? AppPalette.BrushWhitePure : AppPalette.BrushGray;
-        }
-        foreach (var (key, (btn, bg)) in _ancSubButtons)
-        {
-            var active = key == _ancLevel;
-            bg.Background = active ? accent : circleGray;
-            btn.Foreground = active ? AppPalette.BrushWhitePure : AppPalette.BrushGray;
-        }
-    }
-
-    private void SwitchAncMain(NoiseOptionModel opt)
-    {
-        if (_nextManager is null && _controlManager?.ActiveManager is null) return;
-        _ancMain = opt.Key;
-        if (opt.Children.Count > 0)
-        {
-            PopulateAncSub(opt);
-            AncSubRow.Visibility = Visibility.Visible;
-            var target = opt.Children[0].Key;
-            _ancLevel = target;
-            _ = _commandDispatcher?.RunAsync("小窗 ANC 主模式", m => m.SetNoiseCancellationByKeyAsync(target, CancellationToken.None));
-        }
-        else
-        {
-            AncSubRow.Visibility = Visibility.Collapsed;
-            _ancLevel = "";
-            _ = _commandDispatcher?.RunAsync("小窗 ANC 主模式", m => m.SetNoiseCancellationByKeyAsync(opt.Key, CancellationToken.None));
-        }
-        HighlightAnc();
-    }
-
-    private void SwitchAncSub(NoiseOptionModel opt)
-    {
-        if (_nextManager is null && _controlManager?.ActiveManager is null) return;
-        _ancLevel = opt.Key;
-        _ = _commandDispatcher?.RunAsync("小窗 ANC 子模式", m => m.SetNoiseCancellationByKeyAsync(opt.Key, CancellationToken.None));
-        HighlightAnc();
-    }
-
-    private void SyncAncFromState(string modeKey)
-    {
-        var mainOpt = _ancOptions.FirstOrDefault(o => o.Key == modeKey && o.Children.Count == 0);
-        if (mainOpt != null)
-        {
-            _ancMain = modeKey;
-            _ancLevel = "";
-            AncSubRow.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        if (_ancChildToMain.TryGetValue(modeKey, out var parentKey))
-        {
-            var container = _ancOptions.FirstOrDefault(o => o.Key == parentKey);
-            if (container != null)
-            {
-                _ancMain = parentKey;
-                _ancLevel = modeKey;
-                PopulateAncSub(container);
-                AncSubRow.Visibility = Visibility.Visible;
-            }
-        }
+        _noiseSignature = string.Empty;
+        SafeRefresh();
     }
 }

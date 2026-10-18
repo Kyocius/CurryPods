@@ -129,5 +129,7 @@ public partial class MainWindow
             _ => "Sidebar_NavHome"
         };
         PageHeading.Text = TranslationCatalog.Get(key);
+        PageHeading.Visibility = _currentPage == "home" ? Visibility.Collapsed : Visibility.Visible;
+        PageLayout.RowSpacing = _currentPage == "home" ? 0 : 16;
     }
 }

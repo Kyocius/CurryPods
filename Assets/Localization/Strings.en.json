@@ -307,5 +307,16 @@
   "Anc_Level": "Noise cancellation level",
   "Feature_Unsupported": "No feature switches are available for this device",
   "Personal_PreviewToast": "Preview notification",
-  "Toast_Connected": "Connected"
+  "Toast_Connected": "Connected",
+  "Feature_DualDevice_Description": "Keep your headphones connected to two devices.",
+  "Feature_GameMode_Description": "Reduce audio latency while gaming.",
+  "Feature_LongPowerMode_Description": "Adjust the operating mode for longer battery life.",
+  "Feature_WearDetection_Description": "Control playback based on whether you are wearing the headphones.",
+  "Feature_SpineHealth_Description": "Use the posture reminders provided by your headphones.",
+  "Feature_SpatialSound_Description": "Adjust the sense of space in your audio.",
+  "Feature_GameSound_Description": "Use sound effects designed for games.",
+  "Feature_BassEngine_Description": "Enhance bass response.",
+  "Feature_VocalEnhance_Description": "Emphasize voices and vocals.",
+  "Feature_HearingEnhance_Description": "Use personalized hearing enhancement.",
+  "Common_Close": "Close"
 }
