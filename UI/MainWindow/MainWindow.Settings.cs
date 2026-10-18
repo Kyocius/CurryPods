@@ -10,6 +10,7 @@ public partial class MainWindow
     {
         _uiSettings.SetString("Language", LanguageManager.ToStoredLanguage(option));
         LanguageManager.ApplyConfiguredCulture(option.IsAutomatic ? null : option.CultureCode);
+        UpdatePageHeading();
 
         AppDispatcher.Post(() =>
         {

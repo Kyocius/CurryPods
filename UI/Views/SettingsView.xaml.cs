@@ -54,13 +54,11 @@ public sealed partial class SettingsView : UserControl, IPageView
         FrontendState = frontendState;
         DesktopLinks = desktopLinks;
 
-        CbTray.IsChecked = UiSettings.GetBool("TrayEnabled", false);
-        CbAuto.IsChecked = UiSettings.GetBool("AutoStart", false);
+        CbTray.IsOn = UiSettings.GetBool("TrayEnabled", false);
+        CbAuto.IsOn = UiSettings.GetBool("AutoStart", false);
 
-        CbTray.Checked += CbTray_Changed;
-        CbTray.Unchecked += CbTray_Changed;
-        CbAuto.Checked += CbAuto_Changed;
-        CbAuto.Unchecked += CbAuto_Changed;
+        CbTray.Toggled += CbTray_Changed;
+        CbAuto.Toggled += CbAuto_Changed;
         CbPriorityDevice.SelectionChanged += CbPriorityDevice_Changed;
     }
 
@@ -79,14 +77,14 @@ public sealed partial class SettingsView : UserControl, IPageView
 
     private void CbTray_Changed(object sender, RoutedEventArgs e)
     {
-        var on = CbTray.IsChecked == true;
+        var on = CbTray.IsOn;
         UiSettings.SetBool("TrayEnabled", on);
         Log?.Debug("UI", $"设置: 关闭到托盘 -> {on}");
     }
 
     private void CbAuto_Changed(object sender, RoutedEventArgs e)
     {
-        var on = CbAuto.IsChecked == true;
+        var on = CbAuto.IsOn;
         UiSettings.SetBool("AutoStart", on);
         WindowsStartup.TrySetEnabled(on);
         Log?.Debug("UI", $"设置: 开机自启 -> {on}");
@@ -212,7 +210,7 @@ public sealed partial class SettingsView : UserControl, IPageView
     {
         var count = ControlManager?.GetHiddenMultiDeviceCount() ?? 0;
         BtnRestoreHiddenDevices.IsEnabled = count > 0;
-        BtnRestoreHiddenDevices.Content = count > 0
+        BtnRestoreHiddenDevices.Label = count > 0
             ? string.Format(LanguageManager.Instance.GetString(LanguageManager.Instance.MultiDevice_RestoreHidden), count)
             : LanguageManager.Instance.GetString(LanguageManager.Instance.Settings_RestoreHiddenDevices);
     }

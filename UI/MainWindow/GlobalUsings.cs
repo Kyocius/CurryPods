@@ -21,7 +21,6 @@ global using OppoPodsManager.Control.Core.Transport;
 global using OppoPodsManager.Control.Core.Features;
 global using OppoPodsManager.UI.Toast;
 global using OppoPodsManager.UI.Views;
-global using OppoPodsManager.UI.Controls;
 
 namespace OppoPodsManager;
 

@@ -113,6 +113,8 @@
 
 ## 界面说明
 
+界面使用 WinUI 原生 `TitleBar` 和 `NavigationView`：宽窗口展开侧栏，窄窗口自动折叠。页面在同一个内容区域切换并保留编辑状态；设置使用 `ToggleSwitch`、`CommandBar` 和 `Expander`，输入与确认操作使用 `ContentDialog`。布局与导航组织参考 [Bili.Copilot](https://github.com/Richasy/Bili.Copilot/blob/master/src/Desktop/BiliCopilot.UI/Controls/RootLayout.xaml)。
+
 主界面自上而下：
 
 | 区域 | 说明 |

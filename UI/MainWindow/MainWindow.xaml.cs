@@ -52,24 +52,13 @@ public partial class MainWindow : Window, IViewHost
     // 缓存画刷
     private static SolidColorBrush BrushGreen => AppPalette.BrushGreen;
     private static SolidColorBrush BrushRed => AppPalette.BrushRed;
-    private static readonly SolidColorBrush BrushTransparent = AppPalette.BrushTransparent;
     private SolidColorBrush BrushGray => _isLightTheme ? _brushGrayLight : _brushGrayDark;
     private SolidColorBrush BrushWhite => _isLightTheme ? _brushDark : _brushWhiteDark;
     private static readonly SolidColorBrush _brushGrayDark = new(ColorHelper.FromArgb(0xFF, 0xCC, 0xCC, 0xCC));
     private static readonly SolidColorBrush _brushGrayLight = new(ColorHelper.FromArgb(0xFF, 0x55, 0x55, 0x55));
     private static readonly SolidColorBrush _brushWhiteDark = new(Colors.White);
     private static readonly SolidColorBrush _brushDark = new(ColorHelper.FromArgb(0xFF, 0x1A, 0x1A, 0x1A));
-    private static readonly SolidColorBrush BrushAccent = new(ColorHelper.FromArgb(0xFF, 0x60, 0x90, 0xFF));
-    private static readonly SolidColorBrush BrushWhitePure = new(Colors.White);
-
-    private readonly SolidColorBrush _glassCardBgBrush = new(Colors.White);
-    private readonly SolidColorBrush _sidebarSelectedBgBrush = new(ColorHelper.FromArgb(0x0C, 0x00, 0x00, 0x00));
-    private readonly SolidColorBrush _dialogOverlayBgBrush = new(ColorHelper.FromArgb(0x50, 0x00, 0x00, 0x00));
     private readonly SolidColorBrush _textPanelButtonBgBrush = new(ColorHelper.FromArgb(0x0A, 0x00, 0x00, 0x00));
-    private readonly SolidColorBrush _textPanelButtonHoverBgBrush = new(ColorHelper.FromArgb(0x12, 0x00, 0x00, 0x00));
-    private readonly SolidColorBrush _textPanelButtonPressedBgBrush = new(ColorHelper.FromArgb(0x1C, 0x00, 0x00, 0x00));
-    private readonly SolidColorBrush _windowBackgroundBrush = new(ColorHelper.FromArgb(0xFF, 0xE5, 0xE5, 0xEA));
-    private readonly SolidColorBrush _sidebarBackgroundBrush = new(Colors.White);
     private readonly SolidColorBrush _deviceCurrentBgBrush = new(ColorHelper.FromArgb(0x12, 0x4C, 0xAF, 0x50));
 
     private readonly SolidColorBrush _brushLightGreenLight = new(ColorHelper.FromArgb(0xFF, 0x2E, 0x7D, 0x32));
@@ -80,7 +69,6 @@ public partial class MainWindow : Window, IViewHost
     private SolidColorBrush BrushLightGreen => _isLightTheme ? _brushLightGreenLight : _brushLightGreenDark;
     private SolidColorBrush BrushLightRed => _isLightTheme ? _brushLightRedLight : _brushLightRedDark;
 
-    private bool _themeResourceBrushesRegistered;
     private bool _isLightTheme;
     private int _currentThemeIndex;
     private readonly List<IDisposable> _linguaSubs = new();
@@ -122,6 +110,7 @@ public partial class MainWindow : Window, IViewHost
                 : "v?";
 
             InitializeComponent();
+            Navigation_PaneVisibilityChanged(AppNavigation, EventArgs.Empty);
             AppDispatcher.Initialize(this.DispatcherQueue);
             SetupAppWindow();
             AdaptToPlatform();
@@ -168,7 +157,7 @@ public partial class MainWindow : Window, IViewHost
         _logManager.Info("UI", "主窗口已接入 Next 控制层，禁用原项目连接循环。");
         AttachViews();
         ApplyNextSnapshot(_frontendState.Snapshot);
-        _ = HomeView?.RefreshNextDevicesAsync();
+        _ = HomeView.RefreshNextDevicesAsync();
     }
 
     private void SetupAppWindow()
@@ -176,19 +165,19 @@ public partial class MainWindow : Window, IViewHost
         var hwnd = WindowNative.GetWindowHandle(this);
         var windowId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(windowId);
-        _appWindow.Resize(new SizeInt32(890, 640));
+        _appWindow.Resize(new SizeInt32(1100, 740));
 
         var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
         if (displayArea != null)
         {
             var centeredPosition = _appWindow.Position;
-            centeredPosition.X = (displayArea.WorkArea.Width - 890) / 2;
-            centeredPosition.Y = (displayArea.WorkArea.Height - 640) / 2;
+            centeredPosition.X = displayArea.WorkArea.X + (displayArea.WorkArea.Width - 1100) / 2;
+            centeredPosition.Y = displayArea.WorkArea.Y + (displayArea.WorkArea.Height - 740) / 2;
             _appWindow.Move(centeredPosition);
         }
 
         ExtendsContentIntoTitleBar = true;
-        SetTitleBar(CustomTitleBar);
+        SetTitleBar(WindowTitleBar);
         _appWindow.Closing += OnAppWindowClosing;
         _appWindow.Changed += OnAppWindowChanged;
         _logManager?.Info("UI", $"SetupAppWindow 完成: HWND=0x{hwnd:X}, Title='{Title}', IsVisible={_appWindow.IsVisible}");
@@ -243,9 +232,6 @@ public partial class MainWindow : Window, IViewHost
         _logManager?.Debug("UI", $"快照已应用：revision={snapshot.Revision}，connected={snapshot.IsConnected}，device={snapshot.DeviceName ?? ""}。");
     }
 
-    // ---- 浮层对话框 ----
-    private TaskCompletionSource<string?>? _promptTcs;
-    private TaskCompletionSource<bool>? _confirmTcs;
 
     // ---- 耳机预览 ----
     private readonly Dictionary<EarphoneSlot, Image> _earphonePreviews = new();
@@ -329,25 +315,6 @@ public partial class MainWindow : Window, IViewHost
     void IViewHost.SetEqControlsEnabled(bool enabled) => EqView?.SetControlsEnabled(enabled);
     void IViewHost.ApplyEarphoneImage(Image target, EarphoneSlot slot) => ReplaceEarphoneImage(target, slot);
     Task<bool> IViewHost.ShowFindWarningDialogAsync() => ShowFindWarningDialog();
-
-    private async Task ShowFeedbackDialogAsync()
-    {
-        _confirmTcs = new TaskCompletionSource<bool>();
-        _promptTcs = null;
-        DialogTitle.Text = LanguageManager.Instance.GetString(LanguageManager.Instance.Dialog_FeedbackTitle);
-        DialogMessage.FontSize = 13;
-        DialogMessage.Text = LanguageManager.Instance.GetString(LanguageManager.Instance.Dialog_FeedbackMessage);
-        DialogInput.Visibility = Visibility.Collapsed;
-        DialogCancelBtn.Content = LanguageManager.Instance.GetString(LanguageManager.Instance.Dialog_Cancel);
-        DialogCancelBtn.Visibility = Visibility.Visible;
-        DialogSkipBtn.Content = "GitLab";
-        DialogSkipBtn.Visibility = Visibility.Visible;
-        DialogConfirmBtn.Content = LanguageManager.Instance.GetString(LanguageManager.Instance.Dialog_Confirm);
-        DialogOverlay.Visibility = Visibility.Visible;
-        var ok = await _confirmTcs.Task;
-        if (!ok) return;
-        ExportFeedback("https://github.com/Zhaoyi-ya/OppoPodsManager/issues/new");
-    }
 
     private void OnWindowClosed(object sender, WindowEventArgs args)
     {

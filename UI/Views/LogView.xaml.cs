@@ -121,11 +121,5 @@ public sealed partial class LogView : UserControl, IPageView
         }
     }
 
-    private void BtnLogBack_Click(object sender, RoutedEventArgs e)
-    {
-        Stop();
-        Host?.RequestNavigate("settings");
-    }
-
     public void ApplySnapshot(BusinessSnapshot snapshot) { }
 }

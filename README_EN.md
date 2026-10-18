@@ -118,6 +118,8 @@ preferences, model override, tray/auto-start preferences) are remembered.
 
 ## Interface Guide
 
+The shell uses WinUI `TitleBar` and `NavigationView`, with an expanded sidebar in wide windows and collapsed navigation in narrow windows. Pages share one content host and retain edits. Settings use `ToggleSwitch`, `CommandBar` and `Expander`; prompts and confirmations use `ContentDialog`. Navigation organization references [Bili.Copilot](https://github.com/Richasy/Bili.Copilot/blob/master/src/Desktop/BiliCopilot.UI/Controls/RootLayout.xaml).
+
 Main window, top to bottom:
 
 | Section | Description |

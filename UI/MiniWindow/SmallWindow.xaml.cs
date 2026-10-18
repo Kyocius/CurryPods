@@ -417,7 +417,7 @@ public partial class SmallWindow : Window
         _ancSubSignature = "";
         AncSubRow.Visibility = Visibility.Collapsed;
 
-        var segmentGrid = new OppoPodsManager.UI.Controls.UniformGrid { Columns = Math.Max(1, _ancOptions.Count) };
+        var segmentGrid = new Grid();
         var capsule = new Border
         {
             CornerRadius = new CornerRadius(9),
@@ -436,6 +436,8 @@ public partial class SmallWindow : Window
                 : i == _ancOptions.Count - 1 ? new CornerRadius(0, 7, 7, 0)
                 : new CornerRadius(0);
             var (segment, icon, label) = MakeAncSegmentButton(opt, corner, 30, 15, 13);
+            segmentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetColumn(segment, i);
             segmentGrid.Children.Add(segment);
             _ancMainButtons[opt.Key] = (segment, icon, label);
             foreach (var child in opt.Children) _ancChildToMain[child.Key] = opt.Key;

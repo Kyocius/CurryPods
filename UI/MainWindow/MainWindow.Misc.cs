@@ -22,6 +22,7 @@ public partial class MainWindow
     {
         var name = GetNextWindowTitle();
         Title = name;
+        WindowTitleBar.Subtitle = name == AppConst.WindowTitle ? string.Empty : name;
         var snapshot = _frontendState?.Snapshot;
         var parts = new List<string>();
         AddNextBatteryPart(parts, "L", snapshot?.LeftBattery);

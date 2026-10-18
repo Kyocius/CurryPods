@@ -60,12 +60,15 @@ public partial class MainWindow
 
     private void EnableAdvancedRender()
     {
-        SidebarFullBg.Visibility = Visibility.Visible;
+        WindowTitleBar.Visibility = Visibility.Collapsed;
+        ExtendsContentIntoTitleBar = false;
     }
 
     private void DisableAdvancedRender()
     {
-        SidebarFullBg.Visibility = Visibility.Collapsed;
+        WindowTitleBar.Visibility = Visibility.Visible;
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(WindowTitleBar);
     }
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs e)
@@ -76,6 +79,7 @@ public partial class MainWindow
         if (_shouldKeepWindowAlive?.Invoke() == true)
         {
             e.Cancel = true;
+            _activeDialog?.Hide();
             sender.Hide();
             LogView?.Stop();
             return;
@@ -101,10 +105,13 @@ public partial class MainWindow
         _runtimeUiDisposed = true;
         _realClose = true;
         HomeView?.MarkClosed();
-        _promptTcs?.TrySetResult(null);
-        _confirmTcs?.TrySetResult(false);
-        _promptTcs = null;
-        _confirmTcs = null;
+        _activeDialog?.Hide();
+        AppNavigation.SelectionChanged -= Navigation_SelectionChanged;
+        AppNavigation.ItemInvoked -= Navigation_ItemInvoked;
+        AppNavigation.BackRequested -= Navigation_BackRequested;
+        AppNavigation.PaneOpened -= Navigation_PaneVisibilityChanged;
+        AppNavigation.PaneClosed -= Navigation_PaneVisibilityChanged;
+        AppNavigation.DisplayModeChanged -= Navigation_PaneVisibilityChanged;
 
         if (_appWindow is not null)
         {
@@ -128,6 +135,8 @@ public partial class MainWindow
         DisposeWindowImages();
         SetBackgroundImageSource(null, "");
         _backgroundImages.Dispose();
+        PageContent.Content = null;
+        _pageContainers.Clear();
         SystemBackdrop = null;
         Content = null;
     }

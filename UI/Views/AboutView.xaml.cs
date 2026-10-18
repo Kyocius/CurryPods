@@ -29,8 +29,6 @@ public sealed partial class AboutView : UserControl, IPageView
     {
     }
 
-    private void AboutBack_Click(object sender, RoutedEventArgs e) => Host?.RequestNavigate("settings");
-
     private void OpenUrl_Click(object sender, RoutedEventArgs e)
     {
         if (sender is HyperlinkButton btn && btn.Tag is string url)

@@ -2,7 +2,6 @@
     x:Class="OppoPodsManager.UI.MiniWindow.Status.SmallWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="using:OppoPodsManager.UI.Controls"
     xmlns:l10n="using:OppoPodsManager.Assets.Localization"
     Title="CurryPods">
 
@@ -91,7 +90,7 @@
                         <TextBlock Text="{l10n:Translate Key=Feature_Title}" FontSize="14" HorizontalAlignment="Center"/>
                         <TextBlock x:Name="FeaturePlaceholderText" Text="{l10n:Translate Key=Feature_Placeholder}" FontSize="13" Opacity="0.45" HorizontalAlignment="Center"/>
                         <StackPanel x:Name="FeatureContentPanel" Visibility="Collapsed" Spacing="4">
-                            <controls:UniformGrid Columns="2" HorizontalAlignment="Stretch">
+                            <StackPanel Spacing="4" HorizontalAlignment="Stretch">
                                 <CheckBox x:Name="CbDualDevice" Tag="dual-device" Content="{l10n:Translate Key=Feature_DualDevice}" Margin="2,2" FontSize="12"/>
                                 <CheckBox x:Name="CbGame" Tag="game-mode" Content="{l10n:Translate Key=Feature_GameMode}" Margin="2,2" FontSize="12"/>
                                 <CheckBox x:Name="CbLongPower" Tag="long-battery" Content="{l10n:Translate Key=Feature_LongPowerMode}" Margin="2,2" FontSize="12"/>
@@ -102,7 +101,7 @@
                                 <CheckBox x:Name="CbBassEngine" Tag="bass-engine" Content="{l10n:Translate Key=Feature_BassEngine}" Margin="2,2" FontSize="12"/>
                                 <CheckBox x:Name="CbVocalEnhance" Tag="voice-enhancement" Content="{l10n:Translate Key=Feature_VocalEnhance}" Margin="2,2" FontSize="12"/>
                                 <CheckBox x:Name="CbHearingEnhance" Tag="hearing-enhancement" Content="{l10n:Translate Key=Feature_HearingEnhance}" Margin="2,2" FontSize="12"/>
-                            </controls:UniformGrid>
+                            </StackPanel>
                         </StackPanel>
                     </StackPanel>
                 </Border>

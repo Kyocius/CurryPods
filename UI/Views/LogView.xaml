@@ -9,19 +9,10 @@
           BorderThickness="1">
     <Grid RowDefinitions="Auto,*">
       <!-- 顶栏 -->
-      <Grid Grid.Row="0" Margin="0,0,0,12">
-        <Button x:Name="BtnLogBack" Width="32" Height="32"
-                HorizontalAlignment="Left" Background="Transparent" BorderThickness="0"
-                Click="BtnLogBack_Click" Padding="0">
-          <FontIcon Glyph="&#xE72B;" FontSize="14" />
-        </Button>
-        <TextBlock Text="{l10n:Translate Key=Log_Title}" FontSize="16" FontWeight="SemiBold"
-                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-          <Button x:Name="BtnLogExport" Content="{l10n:Translate Key=Log_ExportZip}"
-                  Height="32" FontSize="13" Padding="12,0" Click="BtnLogExport_Click"/>
-        </StackPanel>
-      </Grid>
+      <CommandBar Grid.Row="0" Margin="0,0,0,12" DefaultLabelPosition="Right" Background="Transparent">
+        <AppBarButton x:Name="BtnLogExport" Label="{l10n:Translate Key=Log_ExportZip}"
+                      Icon="Save" Click="BtnLogExport_Click"/>
+      </CommandBar>
 
       <!-- 日志列表 -->
       <ListView Grid.Row="1" x:Name="LbLog" BorderThickness="0" Background="Transparent"
