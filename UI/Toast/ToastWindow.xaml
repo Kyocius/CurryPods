@@ -4,106 +4,49 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:l10n="using:OppoPodsManager.Assets.Localization"
     Title="CurryPods Toast">
-
-    <Grid x:Name="RootLayout" Background="Transparent" Width="360">
-        <Border x:Name="Card" Margin="8" CornerRadius="14"
-                Background="#EE1C1C1E"
-                BorderBrush="#18FFFFFF" BorderThickness="1">
-            <Grid>
-                <!-- ========== 电量面板 ========== -->
-                <StackPanel x:Name="BatteryPanel" Margin="18,16" Spacing="14">
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                        <Ellipse Width="8" Height="8" Fill="#4CD964" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="TitleBlock" Text="CurryPods"
-                                   FontSize="15" Foreground="#F5FFFFFF" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Grid ColumnDefinitions="*,8,*,8,*">
-                        <Border x:Name="LeftPill" Grid.Column="0" CornerRadius="10" Background="#1FFFFFFF" Padding="0,10">
-                            <StackPanel HorizontalAlignment="Center" Spacing="3">
-                                <TextBlock x:Name="LeftPct" Text="- %" FontSize="22" FontWeight="SemiBold"
-                                           Foreground="#F5FFFFFF" HorizontalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Center">
-                                    <Path x:Name="LeftBolt" Width="10" Height="10" Stretch="Uniform"
-                                          Fill="#4CD964" VerticalAlignment="Center" Visibility="Collapsed"
-                                          Data="M0.009,7.21C-0.023,7.286 0.032,7.37 0.115,7.37H3.303V11.885C3.303,12.011 3.476,12.045 3.524,11.929L6.6,4.471C6.631,4.396 6.575,4.313 6.494,4.313H3.303V0.115C3.303,-0.01 3.132,-0.045 3.083,0.069L0.009,7.21Z"/>
-                                    <TextBlock x:Name="LeftLabel" Text="{l10n:Translate Key=Toast_LeftLabel}" FontSize="12"
-                                               Foreground="#99FFFFFF" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                        <Border x:Name="CasePill" Grid.Column="2" CornerRadius="10" Background="#1FFFFFFF" Padding="0,10">
-                            <StackPanel HorizontalAlignment="Center" Spacing="3">
-                                <TextBlock x:Name="CasePct" Text="- %" FontSize="22" FontWeight="SemiBold"
-                                           Foreground="#F5FFFFFF" HorizontalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Center">
-                                    <Path x:Name="CaseBolt" Width="10" Height="10" Stretch="Uniform"
-                                          Fill="#4CD964" VerticalAlignment="Center" Visibility="Collapsed"
-                                          Data="M0.009,7.21C-0.023,7.286 0.032,7.37 0.115,7.37H3.303V11.885C3.303,12.011 3.476,12.045 3.524,11.929L6.6,4.471C6.631,4.396 6.575,4.313 6.494,4.313H3.303V0.115C3.303,-0.01 3.132,-0.045 3.083,0.069L0.009,7.21Z"/>
-                                    <TextBlock x:Name="CaseLabel" Text="{l10n:Translate Key=Toast_CaseLabel}" FontSize="12"
-                                               Foreground="#99FFFFFF" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                        <Border x:Name="RightPill" Grid.Column="4" CornerRadius="10" Background="#1FFFFFFF" Padding="0,10">
-                            <StackPanel HorizontalAlignment="Center" Spacing="3">
-                                <TextBlock x:Name="RightPct" Text="- %" FontSize="22" FontWeight="SemiBold"
-                                           Foreground="#F5FFFFFF" HorizontalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" Spacing="3" HorizontalAlignment="Center">
-                                    <Path x:Name="RightBolt" Width="10" Height="10" Stretch="Uniform"
-                                          Fill="#4CD964" VerticalAlignment="Center" Visibility="Collapsed"
-                                          Data="M0.009,7.21C-0.023,7.286 0.032,7.37 0.115,7.37H3.303V11.885C3.303,12.011 3.476,12.045 3.524,11.929L6.6,4.471C6.631,4.396 6.575,4.313 6.494,4.313H3.303V0.115C3.303,-0.01 3.132,-0.045 3.083,0.069L0.009,7.21Z"/>
-                                    <TextBlock x:Name="RightLabel" Text="{l10n:Translate Key=Toast_RightLabel}" FontSize="12"
-                                               Foreground="#99FFFFFF" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </StackPanel>
-
-                <!-- ========== 低电量遮罩 ========== -->
-                <Border x:Name="LowBatteryOverlay" Background="#FF1C1C1E" CornerRadius="14"
-                        Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" Margin="18,20">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
-                            <Path x:Name="LowBolt" Width="18" Height="18" Stretch="Uniform" Fill="#FFB020"
-                                  VerticalAlignment="Center"
-                                  Data="M0.009,7.21C-0.023,7.286 0.032,7.37 0.115,7.37H3.303V11.885C3.303,12.011 3.476,12.045 3.524,11.929L6.6,4.471C6.631,4.396 6.575,4.313 6.494,4.313H3.303V0.115C3.303,-0.01 3.132,-0.045 3.083,0.069L0.009,7.21Z"/>
-                            <TextBlock Text="{l10n:Translate Key=Toast_LowBattery}" FontSize="22" FontWeight="SemiBold"
-                                       Foreground="#FFB020" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock x:Name="LowHintText" Text="{l10n:Translate Key=Toast_LowBatteryHint}" FontSize="13"
-                                   Foreground="#99FFFFFF" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- ========== 极低电量遮罩 ========== -->
-                <Border x:Name="CriticalBatteryOverlay" Background="#FF1C1C1E" CornerRadius="14"
-                        Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="6" Margin="18,20">
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="6">
-                            <Path x:Name="CritBolt" Width="18" Height="18" Stretch="Uniform" Fill="#FF453A"
-                                  VerticalAlignment="Center"
-                                  Data="M0.009,7.21C-0.023,7.286 0.032,7.37 0.115,7.37H3.303V11.885C3.303,12.011 3.476,12.045 3.524,11.929L6.6,4.471C6.631,4.396 6.575,4.313 6.494,4.313H3.303V0.115C3.303,-0.01 3.132,-0.045 3.083,0.069L0.009,7.21Z"/>
-                            <TextBlock Text="{l10n:Translate Key=Toast_CriticalBattery}" FontSize="22" FontWeight="SemiBold"
-                                       Foreground="#FF453A" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock x:Name="CritHintText" Text="{l10n:Translate Key=Toast_CriticalBatteryHint}" FontSize="13"
-                                   Foreground="#FF8078" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- ========== 断开面板 ========== -->
-                <StackPanel x:Name="DisconnectPanel" Visibility="Collapsed" Margin="18,18" Spacing="8">
-                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                        <Ellipse Width="8" Height="8" Fill="#FF453A" VerticalAlignment="Center"/>
-                        <TextBlock x:Name="DisconnectTitle" Text="" FontSize="15"
-                                   Foreground="#F5FFFFFF" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <TextBlock Text="{l10n:Translate Key=Toast_Disconnected}" FontSize="16"
-                               Foreground="#FF8078" HorizontalAlignment="Center"/>
+    <Border x:Name="RootLayout" Width="360" Padding="20"
+            Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
+        <StackPanel Spacing="16">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <FontIcon Glyph="&#xE7F6;" FontSize="20" VerticalAlignment="Center"
+                          Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock x:Name="TitleBlock" Style="{StaticResource BodyStrongTextBlockStyle}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="StatusText" Text="{l10n:Translate Key=Toast_Connected}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
                 </StackPanel>
             </Grid>
-        </Border>
-    </Grid>
+            <InfoBar x:Name="BatteryWarning" IsOpen="False" IsClosable="False"/>
+            <Grid x:Name="BatteryPanel" ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Border Grid.Column="0" Padding="8,12" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock x:Name="LeftPct" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon x:Name="LeftBolt" Glyph="&#xE945;" FontSize="12" Visibility="Collapsed"/>
+                            <TextBlock Text="{l10n:Translate Key=Toast_LeftLabel}" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="8,12" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock x:Name="CasePct" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon x:Name="CaseBolt" Glyph="&#xE945;" FontSize="12" Visibility="Collapsed"/>
+                            <TextBlock Text="{l10n:Translate Key=Toast_CaseLabel}" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="8,12" CornerRadius="4" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock x:Name="RightPct" Style="{StaticResource SubtitleTextBlockStyle}" HorizontalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <FontIcon x:Name="RightBolt" Glyph="&#xE945;" FontSize="12" Visibility="Collapsed"/>
+                            <TextBlock Text="{l10n:Translate Key=Toast_RightLabel}" Style="{StaticResource CaptionTextBlockStyle}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </Border>
 </Window>

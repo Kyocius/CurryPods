@@ -17,6 +17,18 @@ namespace OppoPodsManager.UI.Views;
 public partial class PersonalView : UserControl, IPageView
 {
     public IViewHost? Host { get; set; }
+    private async void PreviewToast_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            if (Host is not null)
+                await Host.PreviewToastAsync();
+        }
+        catch (Exception exception)
+        {
+            Log?.Error("Toast", "预览通知失败。", exception);
+        }
+    }
     private ControlManager? ControlManager;
     private SettingsStore UiSettings = null!;
     private ApplicationLog? Log;

@@ -7,8 +7,6 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Shapes;
-using Path = Microsoft.UI.Xaml.Shapes.Path;
 using OppoPodsManager.Assets.Localization;
 using OppoPodsManager.Assets.VisualAssets;
 using OppoPodsManager.Control.Brands.Oppo.Features;
@@ -59,16 +57,6 @@ public partial class HomeView : UserControl, IPageView
     private readonly List<DeviceConnectionOption> _nextDevices = new();
     private bool _suppressEarbudSelection;
 
-    // ---- ANC 动态 UI（按 JSON 生成） ----
-    private string _ancMain = "", _ancLevel = "";
-    private readonly Dictionary<string, string> _ancLastSub = new();
-    private readonly Dictionary<string, (Ellipse bg, Path icon, TextBlock label)> _ancMainButtons = new();
-    private readonly Dictionary<string, (Button btn, Border bg)> _ancSubButtons = new();
-    private readonly Dictionary<string, string> _ancChildToMain = new();
-    private List<NoiseOptionModel> _ancOptions = new();
-    private string _ancBuiltForModel = "";
-    private string _ancSubSignature = "";
-
     // ---- 状态/功能本地状态 ----
     private DateTime _connectionStatusStartedAt = DateTime.MinValue;
     private bool _findDeviceActive;
@@ -81,25 +69,24 @@ public partial class HomeView : UserControl, IPageView
         InitializeComponent();
 
         // 功能开关（原 MainWindow ctor 程序化接线，现由本视图自持）
-        WireCheckBox(CbSpatial, CbSpatial_Changed);
-        WireCheckBox(CbGame, CbGame_Changed);
-        WireCheckBox(CbGameSound, CbGameSound_Changed);
-        WireCheckBox(CbDualDevice, CbDualDevice_Changed);
-        WireCheckBox(CbBassEngine, CbBassEngine_Changed);
-        WireCheckBox(CbVocalEnhance, CbVocalEnhance_Changed);
-        WireCheckBox(CbHearingEnhance, CbHearingEnhance_Changed);
-        WireCheckBox(CbLongPower, CbLongPower_Changed);
-        WireCheckBox(CbWearDetection, CbWearDetection_Changed);
-        WireCheckBox(CbSpineHealth, CbSpineHealth_Changed);
+        WireToggleSwitch(CbSpatial, CbSpatial_Changed);
+        WireToggleSwitch(CbGame, CbGame_Changed);
+        WireToggleSwitch(CbGameSound, CbGameSound_Changed);
+        WireToggleSwitch(CbDualDevice, CbDualDevice_Changed);
+        WireToggleSwitch(CbBassEngine, CbBassEngine_Changed);
+        WireToggleSwitch(CbVocalEnhance, CbVocalEnhance_Changed);
+        WireToggleSwitch(CbHearingEnhance, CbHearingEnhance_Changed);
+        WireToggleSwitch(CbLongPower, CbLongPower_Changed);
+        WireToggleSwitch(CbWearDetection, CbWearDetection_Changed);
+        WireToggleSwitch(CbSpineHealth, CbSpineHealth_Changed);
         CbDevice.SelectionChanged += CbDevice_Changed;
 
-        ResetNextAncUi();
+
     }
 
-    private static void WireCheckBox(CheckBox cb, RoutedEventHandler handler)
+    private static void WireToggleSwitch(ToggleSwitch cb, RoutedEventHandler handler)
     {
-        cb.Checked += handler;
-        cb.Unchecked += handler;
+        cb.Toggled += handler;
     }
 
     /// <summary>外壳在窗口关闭时调用，避免异步回追访问已释放控件。</summary>
@@ -264,362 +251,6 @@ public partial class HomeView : UserControl, IPageView
 
     #endregion
 
-    #region ANC 动态 UI（原 MainWindow.Anc.cs）
-
-    private static Geometry ParseGeometry(string pathData)
-    {
-        return ((Path)Microsoft.UI.Xaml.Markup.XamlReader.Load(
-            $"<Path xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Data=\"{pathData}\"/>")).Data;
-    }
-
-    private void BuildAncUi(string modelKey, IReadOnlyList<NoiseOptionModel> options)
-    {
-        var buildKey = modelKey + "|" + string.Join("|", options.Select(opt =>
-            opt.Children.Count > 0
-                ? $"{opt.Key}:{DeviceProfileLoader.AncLabel(opt.Key)}>" + string.Join(",", opt.Children.Select(c => $"{c.Key}:{DeviceProfileLoader.AncLabel(c.Key)}"))
-                : $"{opt.Key}:{DeviceProfileLoader.AncLabel(opt.Key)}"));
-        if (_ancBuiltForModel == buildKey) return;
-        _ancBuiltForModel = buildKey;
-        _ancOptions = options.ToList();
-
-        _ancMainButtons.Clear();
-        _ancChildToMain.Clear();
-        AncMainRow.Children.Clear();
-        AncMainRow.ColumnDefinitions.Clear();
-        AncSubRow.Children.Clear();
-        AncSubRow.ColumnDefinitions.Clear();
-        _ancSubButtons.Clear();
-        _ancSubSignature = "";
-        AncSubRow.Visibility = Visibility.Collapsed;
-
-        if (_ancOptions.Count == 0)
-        {
-            AncPlaceholderText.Visibility = Visibility.Visible;
-            AncMainRow.Visibility = Visibility.Collapsed;
-            return;
-        }
-        AncPlaceholderText.Visibility = Visibility.Collapsed;
-        AncMainRow.Visibility = Visibility.Visible;
-
-        int col = 0;
-        for (int i = 0; i < _ancOptions.Count; i++)
-        {
-            var opt = _ancOptions[i];
-            if (i > 0) AddSpacer(AncMainRow, ref col, 16);
-            var (panel, bg, stroke, icon, label) = MakeAncIconButton(opt, 56, 28, 11, AncMain_Click);
-            AddToRow(AncMainRow, panel, ref col);
-            _ancMainButtons[opt.Key] = (bg, icon, label);
-
-            foreach (var child in opt.Children)
-                _ancChildToMain[child.Key] = opt.Key;
-        }
-        HighlightAnc();
-    }
-
-    private void PopulateAncSub(NoiseOptionModel container)
-    {
-        var signature = container.Key + ":" + string.Join("|", container.Children.Select(c => $"{c.Key};{DeviceProfileLoader.AncLabel(c.Key)}"));
-        if (_ancSubSignature == signature && _ancSubButtons.Count == container.Children.Count)
-            return;
-
-        foreach (var (_, (btn, _)) in _ancSubButtons)
-            btn.Click -= AncSub_Click;
-
-        AncSubRow.Children.Clear();
-        AncSubRow.ColumnDefinitions.Clear();
-        _ancSubButtons.Clear();
-        _ancSubSignature = signature;
-
-        int col = 0;
-        for (int i = 0; i < container.Children.Count; i++)
-        {
-            var child = container.Children[i];
-            if (i > 0) AddSeparator(AncSubRow, ref col);
-            var corner = FirstLast(i, container.Children.Count, 5);
-            var (btn, bg) = MakeTextButton(DeviceProfileLoader.AncLabel(child.Key), child, 72, 28, 13, corner, AncSub_Click);
-            AddToRow(AncSubRow, bg, ref col);
-            _ancSubButtons[child.Key] = (btn, bg);
-        }
-    }
-
-    internal void RefreshAncLabels()
-    {
-        foreach (var (key, (_, _, label)) in _ancMainButtons)
-        {
-            var t = DeviceProfileLoader.AncLabel(key);
-            label.Text = t;
-            label.FontSize = t.Length > 10 ? 9 : 11;
-        }
-        foreach (var (key, (btn, _)) in _ancSubButtons)
-            btn.Content = DeviceProfileLoader.AncLabel(key);
-    }
-
-    private void AddToRow(Grid row, FrameworkElement c, ref int col)
-    {
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        Grid.SetColumn(c, col);
-        row.Children.Add(c);
-        col++;
-    }
-
-    private static void AddSpacer(Grid row, ref int col, int width)
-    {
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(width) });
-        col++;
-    }
-
-    private void AddSeparator(Grid row, ref int col)
-    {
-        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        var sep = new Border { Width = 1, Background = AppPalette.BrushGray, Opacity = 0.12 };
-        Grid.SetColumn(sep, col);
-        row.Children.Add(sep);
-        col++;
-    }
-
-    private static CornerRadius FirstLast(int i, int count, double r)
-    {
-        if (count == 1) return new CornerRadius(r);
-        if (i == 0) return new CornerRadius(r, 0, 0, r);
-        if (i == count - 1) return new CornerRadius(0, r, r, 0);
-        return new CornerRadius(0);
-    }
-
-    internal void HighlightAnc()
-    {
-        var circleGray = AppPalette.CircleGray;
-        var accent = AppPalette.Accent;
-        foreach (var (key, (bg, icon, label)) in _ancMainButtons)
-        {
-            var active = key == _ancMain;
-            bg.Fill = active ? accent : circleGray;
-            icon.Fill = active ? AppPalette.BrushWhitePure : AppPalette.BrushGray;
-        }
-        foreach (var (key, (btn, bg)) in _ancSubButtons)
-        {
-            var active = key == _ancLevel;
-            bg.Background = active ? accent : circleGray;
-            btn.Foreground = active ? AppPalette.BrushWhitePure : AppPalette.BrushGray;
-        }
-    }
-
-    private void SwitchAncMain(NoiseOptionModel opt)
-    {
-        Log?.Debug("UI", $"用户操作: ANC 主模式 -> {opt.Key}");
-        if (ControlManager?.ActiveManager is null) return;
-        _ancMain = opt.Key;
-
-        if (opt.Children.Count > 0)
-        {
-            PopulateAncSub(opt);
-            AncSubRow.Visibility = Visibility.Visible;
-            var target = _ancLastSub.TryGetValue(opt.Key, out var last)
-                && opt.Children.Any(c => c.Key == last)
-                ? last : opt.Children[0].Key;
-            _ancLevel = target;
-            _ = CommandDispatcher?.RunAsync("ANC 主模式", manager => manager.SetNoiseCancellationByKeyAsync(target, CancellationToken.None));
-        }
-        else
-        {
-            AncSubRow.Visibility = Visibility.Collapsed;
-            _ancLevel = "";
-            _ = CommandDispatcher?.RunAsync("ANC 主模式", manager => manager.SetNoiseCancellationByKeyAsync(opt.Key, CancellationToken.None));
-        }
-        HighlightAnc();
-    }
-
-    private void SwitchAncSub(NoiseOptionModel opt)
-    {
-        Log?.Debug("UI", $"用户操作: ANC 子级别 -> {opt.Key}");
-        if (ControlManager?.ActiveManager is null) return;
-        _ancLevel = opt.Key;
-        _ancLastSub[_ancMain] = opt.Key;
-        _ = CommandDispatcher?.RunAsync("ANC 子模式", manager => manager.SetNoiseCancellationByKeyAsync(opt.Key, CancellationToken.None));
-        HighlightAnc();
-    }
-
-    private void AncMain_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncMain(opt);
-    }
-
-    private void AncSub_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is NoiseOptionModel opt) SwitchAncSub(opt);
-    }
-
-    private void SyncAncFromState(string modeKey)
-    {
-        var mainOpt = _ancOptions.FirstOrDefault(o => o.Key == modeKey && o.Children.Count == 0);
-        if (mainOpt != null)
-        {
-            _ancMain = modeKey;
-            _ancLevel = "";
-            AncSubRow.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        if (_ancChildToMain.TryGetValue(modeKey, out var parentKey))
-        {
-            var container = _ancOptions.FirstOrDefault(o => o.Key == parentKey);
-            if (container != null)
-            {
-                _ancMain = parentKey;
-                _ancLevel = modeKey;
-                _ancLastSub[parentKey] = modeKey;
-                PopulateAncSub(container);
-                AncSubRow.Visibility = Visibility.Visible;
-            }
-        }
-    }
-
-    private void ApplyNextNoiseSnapshot(BusinessSnapshot snapshot)
-    {
-        var manager = ControlManager?.ActiveManager;
-        if (manager is null || !snapshot.IsConnected)
-        {
-            AncPanel.Visibility = Visibility.Visible;
-            ResetNextAncUi();
-            return;
-        }
-
-        var presentation = manager.Presentation;
-        AncPanel.Visibility = Visibility.Visible;
-        if (!presentation.SupportsNoiseCancellation)
-        {
-            ResetNextAncUi();
-            return;
-        }
-        BuildAncUi(
-            $"{snapshot.Identity?.ProductId}|{presentation.ModelName}",
-            presentation.NoiseOptions);
-
-        if (snapshot.Noise.Mode != NoiseMode.Unknown)
-        {
-            SyncAncFromState(manager.Presentation.CurrentNoiseModeKey);
-            HighlightAnc();
-        }
-
-        if (snapshot.Noise.Mode == NoiseMode.Smart && snapshot.Noise.SmartLevel is { } smartLevel)
-        {
-            AncRealtimeHint.Text = string.Format(
-                TranslationCatalog.Get("Anc_RealtimeHint"),
-                DeviceText.NoiseModeName(smartLevel));
-            AncRealtimeHint.Visibility = Visibility.Visible;
-        }
-        else
-        {
-            AncRealtimeHint.Visibility = Visibility.Collapsed;
-        }
-    }
-
-    private async Task RunGameSoundCommandAsync(bool enabled)
-    {
-        _gameSoundCommandPending = true;
-        try
-        {
-            await (CommandDispatcher?.RunAsync("游戏音效", manager => manager.SetGameSoundEnabledAsync(enabled, CancellationToken.None)) ?? Task.FromResult(false));
-        }
-        finally
-        {
-            _gameSoundCommandPending = false;
-            if (!_realClose && FrontendState is not null)
-                AppDispatcher.Post(() => ApplyNextFeatureState(FrontendState.Snapshot));
-        }
-    }
-
-    internal void ResetNextAncUi()
-    {
-        AncPanel.Visibility = Visibility.Visible;
-        AncMainRow.Children.Clear();
-        AncMainRow.ColumnDefinitions.Clear();
-        AncSubRow.Children.Clear();
-        AncSubRow.ColumnDefinitions.Clear();
-        AncSubRow.Visibility = Visibility.Collapsed;
-        AncMainRow.Visibility = Visibility.Collapsed;
-        AncPlaceholderText.Visibility = Visibility.Visible;
-        AncRealtimeHint.Visibility = Visibility.Collapsed;
-        _ancBuiltForModel = string.Empty;
-        _ancSubSignature = string.Empty;
-        _ancOptions = new List<NoiseOptionModel>();
-        _ancMainButtons.Clear();
-        _ancSubButtons.Clear();
-        _ancChildToMain.Clear();
-        _ancMain = string.Empty;
-        _ancLevel = string.Empty;
-    }
-
-    private (FrameworkElement panel, Ellipse bg, Ellipse stroke, Path icon, TextBlock label) MakeAncIconButton(
-        NoiseOptionModel opt, int circleSize, int iconSize, int fontSize,
-        RoutedEventHandler onClick)
-    {
-        var bg = new Ellipse
-        {
-            Width = circleSize, Height = circleSize,
-            Fill = AppPalette.BrushTransparent
-        };
-        var icon = new Path
-        {
-            Data = ParseGeometry(AncIcons.GetAncIcon(opt.Key)),
-            Width = 24, Height = 24,
-            Fill = AppPalette.BrushGray,
-            Stretch = Stretch.Uniform,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        icon.Tag = opt;
-        var clickBtn = new Button
-        {
-            Width = circleSize, Height = circleSize,
-            Background = AppPalette.BrushTransparent, BorderThickness = new Thickness(0),
-            Tag = opt
-        };
-        clickBtn.Click += onClick;
-
-        var grid = new Grid { Width = circleSize, Height = circleSize };
-        var hoverScale = new ScaleTransform { ScaleX = 1.0, ScaleY = 1.0, CenterX = circleSize / 2.0, CenterY = circleSize / 2.0 };
-        grid.RenderTransform = hoverScale;
-        grid.PointerEntered += (_, _) => { hoverScale.ScaleX = 1.08; hoverScale.ScaleY = 1.08; };
-        grid.PointerExited += (_, _) => { hoverScale.ScaleX = 1.0; hoverScale.ScaleY = 1.0; };
-        grid.Children.Add(bg);
-        grid.Children.Add(icon);
-        grid.Children.Add(clickBtn);
-
-        var labelText = DeviceProfileLoader.AncLabel(opt.Key);
-        var label = new TextBlock
-        {
-            Text = labelText,
-            FontSize = labelText.Length > 10 ? Math.Max(9, fontSize - 2) : fontSize,
-            Foreground = AppPalette.BrushGray,
-            TextAlignment = TextAlignment.Center,
-            Margin = new Thickness(0, 6, 0, 0),
-            TextWrapping = TextWrapping.Wrap
-        };
-
-        var panel = new StackPanel();
-        panel.Children.Add(grid);
-        panel.Children.Add(label);
-
-        return (panel, bg, bg, icon, label);
-    }
-
-    private (Button, Border) MakeTextButton(string label, NoiseOptionModel opt, int w, int h, int fontSize, CornerRadius corner, RoutedEventHandler onClick)
-    {
-        var btn = new Button
-        {
-            Content = label, Tag = opt, MinWidth = w, Height = h,
-            BorderThickness = new Thickness(0), Padding = new Thickness(8, 0, 8, 0),
-            Background = AppPalette.BrushTransparent,
-            Foreground = AppPalette.BrushGray, FontSize = fontSize,
-            HorizontalContentAlignment = HorizontalAlignment.Center
-        };
-        btn.Click += onClick;
-        var bg = new Border { CornerRadius = corner, Padding = new Thickness(0), Background = AppPalette.BrushTransparent, Child = btn };
-        return (btn, bg);
-    }
-
-    #endregion
-
     #region 功能开关与空间音频（原 MainWindow.Features.cs）
 
     private void ApplyNextFeatureState(BusinessSnapshot snapshot)
@@ -627,6 +258,7 @@ public partial class HomeView : UserControl, IPageView
         var manager = ControlManager?.ActiveManager;
         var presentation = manager?.Presentation;
         var hasFeatures = snapshot.IsConnected && presentation is not null;
+        FeaturePlaceholderText.Text = TranslationCatalog.Get(snapshot.IsConnected ? "Feature_Unsupported" : "Feature_Placeholder");
         FeatureContentPanel.Visibility = hasFeatures ? Visibility.Visible : Visibility.Collapsed;
         FeaturePlaceholderText.Visibility = !hasFeatures ? Visibility.Visible : Visibility.Collapsed;
         if (!hasFeatures)
@@ -909,31 +541,29 @@ public partial class HomeView : UserControl, IPageView
 
     private void CbSpatial_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbSpatial.IsChecked is { } nextOn)
-            _ = CommandDispatcher?.RunAsync("空间声场", manager => manager.SetSpatialSoundAsync(nextOn, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("空间声场", manager => manager.SetSpatialSoundAsync(CbSpatial.IsOn, CancellationToken.None));
     }
 
     private void CbGame_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbGame.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("游戏模式", manager => manager.SetGameModeAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("游戏模式", manager => manager.SetGameModeAsync(CbGame.IsOn, CancellationToken.None));
     }
 
     private void CbGameSound_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbGameSound.IsChecked is { } enabled)
-            _ = RunGameSoundCommandAsync(enabled);
+        if (!_realClose)
+            _ = RunGameSoundCommandAsync(CbGameSound.IsOn);
     }
 
     private void SetGameSoundCheckedSilent(bool value)
     {
-        if (CbGameSound.IsChecked == value)
+        if (CbGameSound.IsOn == value)
             return;
-        CbGameSound.Checked -= CbGameSound_Changed;
-        CbGameSound.Unchecked -= CbGameSound_Changed;
-        CbGameSound.IsChecked = value;
-        CbGameSound.Checked += CbGameSound_Changed;
-        CbGameSound.Unchecked += CbGameSound_Changed;
+        CbGameSound.Toggled -= CbGameSound_Changed;
+        CbGameSound.IsOn = value;
+        CbGameSound.Toggled += CbGameSound_Changed;
     }
 
     private static void SetControlEnabledSilent(FrameworkElement control, bool enabled)
@@ -950,53 +580,51 @@ public partial class HomeView : UserControl, IPageView
 
     private void SetGameCheckedSilent(bool value)
     {
-        CbGame.Checked -= CbGame_Changed;
-        CbGame.Unchecked -= CbGame_Changed;
-        CbGame.IsChecked = value;
-        CbGame.Checked += CbGame_Changed;
-        CbGame.Unchecked += CbGame_Changed;
+        CbGame.Toggled -= CbGame_Changed;
+        CbGame.IsOn = value;
+        CbGame.Toggled += CbGame_Changed;
     }
 
     private void CbDualDevice_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbDualDevice.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("双设备", manager => manager.SetDualDeviceAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("双设备", manager => manager.SetDualDeviceAsync(CbDualDevice.IsOn, CancellationToken.None));
     }
 
     private void CbBassEngine_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbBassEngine.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("低音引擎", manager => manager.SetBassEngineAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("低音引擎", manager => manager.SetBassEngineAsync(CbBassEngine.IsOn, CancellationToken.None));
     }
 
     private void CbVocalEnhance_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbVocalEnhance.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("人声增强", manager => manager.SetVoiceEnhancementAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("人声增强", manager => manager.SetVoiceEnhancementAsync(CbVocalEnhance.IsOn, CancellationToken.None));
     }
 
     private void CbHearingEnhance_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbHearingEnhance.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("听力增强", manager => manager.SetHearingEnhancementAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("听力增强", manager => manager.SetHearingEnhancementAsync(CbHearingEnhance.IsOn, CancellationToken.None));
     }
 
     private void CbLongPower_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbLongPower.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("长续航", manager => manager.SetLongBatteryAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("长续航", manager => manager.SetLongBatteryAsync(CbLongPower.IsOn, CancellationToken.None));
     }
 
     private void CbWearDetection_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbWearDetection.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("佩戴检测", manager => manager.SetWearDetectionAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("佩戴检测", manager => manager.SetWearDetectionAsync(CbWearDetection.IsOn, CancellationToken.None));
     }
 
     private void CbSpineHealth_Changed(object sender, RoutedEventArgs e)
     {
-        if (CbSpineHealth.IsChecked is { } enabled)
-            _ = CommandDispatcher?.RunAsync("脊柱健康", manager => manager.SetSpineHealthAsync(enabled, CancellationToken.None));
+        if (!_realClose)
+            _ = CommandDispatcher?.RunAsync("脊柱健康", manager => manager.SetSpineHealthAsync(CbSpineHealth.IsOn, CancellationToken.None));
     }
 
     private async void BtnFindDevice_Click(object sender, RoutedEventArgs e)
@@ -1034,18 +662,16 @@ public partial class HomeView : UserControl, IPageView
     }
 
     private static void SetNextCheck(
-        CheckBox checkBox,
+        ToggleSwitch checkBox,
         IReadOnlyDictionary<string, bool> states,
         string featureName,
         RoutedEventHandler handler)
     {
         if (states.TryGetValue(featureName, out var enabled))
         {
-            checkBox.Checked -= handler;
-            checkBox.Unchecked -= handler;
-            checkBox.IsChecked = enabled;
-            checkBox.Checked += handler;
-            checkBox.Unchecked += handler;
+            checkBox.Toggled -= handler;
+            checkBox.IsOn = enabled;
+            checkBox.Toggled += handler;
         }
     }
 

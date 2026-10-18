@@ -49,7 +49,6 @@ public partial class MainWindow
             _isLightTheme = false;
         }
         AppPalette.IsLightTheme = _isLightTheme;
-        HomeView?.HighlightAnc();
         if (_frontendState is not null)
             ApplyNextSnapshot(_frontendState.Snapshot);
     }

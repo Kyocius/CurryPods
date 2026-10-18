@@ -25,16 +25,16 @@ public partial class MainWindow
             ?? new MultiDeviceDisplayState([], []);
         var devices = displayState.VisibleDevices;
 
-        DeviceList.Items.Clear();
+        HomeView.DeviceList.Items.Clear();
         _deviceListRows.Clear();
-        DeviceListEmptyHint.Text = !connected
+        HomeView.DeviceListEmptyHint.Text = !connected
             ? LanguageManager.Instance.GetString(LanguageManager.Instance.MultiDevice_EmptyHint)
                 : devices.Count == 0
                 ? LanguageManager.Instance.GetString(hiddenCount > 0
                     ? LanguageManager.Instance.MultiDevice_AllHidden
                     : LanguageManager.Instance.MultiDevice_NoOtherDevices)
                 : string.Empty;
-        DeviceListEmptyHint.Visibility = (!connected || devices.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
+        HomeView.DeviceListEmptyHint.Visibility = (!connected || devices.Count == 0) ? Visibility.Visible : Visibility.Collapsed;
         SettingsView?.UpdateConnectionStrategyVisibility(connected && devices.Count > 0);
         if (!connected || manager is null)
             return;
@@ -101,7 +101,7 @@ public partial class MainWindow
             }
             if (menu.Items.Count > 0)
                 border.ContextFlyout = menu;
-            DeviceList.Items.Add(border);
+            HomeView.DeviceList.Items.Add(border);
         }
     }
 

@@ -109,9 +109,7 @@ public partial class MainWindow
         AppNavigation.SelectionChanged -= Navigation_SelectionChanged;
         AppNavigation.ItemInvoked -= Navigation_ItemInvoked;
         AppNavigation.BackRequested -= Navigation_BackRequested;
-        AppNavigation.PaneOpened -= Navigation_PaneVisibilityChanged;
-        AppNavigation.PaneClosed -= Navigation_PaneVisibilityChanged;
-        AppNavigation.DisplayModeChanged -= Navigation_PaneVisibilityChanged;
+        AppNavigation.DisplayModeChanged -= Navigation_DisplayModeChanged;
 
         if (_appWindow is not null)
         {

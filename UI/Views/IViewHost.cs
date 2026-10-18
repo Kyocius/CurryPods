@@ -18,6 +18,7 @@ public interface IViewHost
     Task ShowCheckResultDialogAsync(string message, string? title = null);
     Task<string?> ShowPromptDialogAsync(string title, string defaultText, string hint);
     Task<bool> ShowConfirmDialogAsync(string title, string message);
+    Task PreviewToastAsync();
 
     // ---- 个性化页外壳级副作用 ----
     /// <summary>应用主题（窗体外观），并持久化主题选择。</summary>

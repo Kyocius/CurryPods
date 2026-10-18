@@ -302,5 +302,10 @@
   "Vivo_AudioEffect_3": "Klare Hohen",
   "Vivo_AudioEffect_4": "Immersiver Klang",
   "Vivo_AudioEffect_5": "Melodische Hörbücher",
-  "Vivo_AudioEffect_11": "Ultimativer Meister"
+  "Vivo_AudioEffect_11": "Ultimativer Meister",
+  "Anc_Unsupported": "Dieses Gerät unterstützt keine Geräuschunterdrückung",
+  "Anc_Level": "Stärke der Geräuschunterdrückung",
+  "Feature_Unsupported": "Für dieses Gerät sind keine Funktionsschalter verfügbar",
+  "Personal_PreviewToast": "Benachrichtigung anzeigen",
+  "Toast_Connected": "Verbunden"
 }

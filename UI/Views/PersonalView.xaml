@@ -47,6 +47,7 @@
         <TextBlock Text="{l10n:Translate Key=Personal_ToastSettings}" FontSize="14" Opacity="0.8"/>
         <CheckBox x:Name="CbLowBatteryToast" Content="{l10n:Translate Key=Personal_LowBatteryToast}" Margin="0,2,0,0"/>
         <CheckBox x:Name="CbConnectionToast" Content="{l10n:Translate Key=Personal_ConnectionToast}" Margin="0,2,0,0"/>
+        <Button x:Name="BtnPreviewToast" Content="{l10n:Translate Key=Personal_PreviewToast}" Click="PreviewToast_Click"/>
         <StackPanel Orientation="Horizontal" Spacing="12">
           <TextBlock Text="{l10n:Translate Key=Personal_ToastDuration}" FontSize="13" VerticalAlignment="Center"/>
           <ComboBox x:Name="CbToastDuration" Height="32" Width="140" HorizontalAlignment="Left">

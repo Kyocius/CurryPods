@@ -18,10 +18,11 @@ public partial class MainWindow
     private readonly Dictionary<string, FrameworkElement> _pageContainers = new();
     private bool _updatingNavigation;
 
-    private void Navigation_PaneVisibilityChanged(NavigationView sender, object args)
+    private void Navigation_DisplayModeChanged(NavigationView sender, object args)
     {
-        if (ConnectedDevicesPane is not null)
-            ConnectedDevicesPane.Visibility = sender.IsPaneOpen ? Visibility.Visible : Visibility.Collapsed;
+        if (PageLayout is not null)
+            PageLayout.Margin = sender.DisplayMode == NavigationViewDisplayMode.Minimal
+                ? new Thickness(12, 56, 12, 12) : new Thickness(24);
     }
 
     private void Navigation_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)

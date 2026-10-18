@@ -4,28 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:l10n="using:OppoPodsManager.Assets.Localization">
 
-  <StackPanel Spacing="14" Margin="0,0,0,40">
-      <VisualStateManager.VisualStateGroups>
-        <VisualStateGroup>
-          <VisualState x:Name="WideControls">
-            <VisualState.StateTriggers>
-              <AdaptiveTrigger MinWindowWidth="1000"/>
-            </VisualState.StateTriggers>
-          </VisualState>
-          <VisualState x:Name="NarrowControls">
-            <VisualState.StateTriggers>
-              <AdaptiveTrigger MinWindowWidth="0"/>
-            </VisualState.StateTriggers>
-            <VisualState.Setters>
-              <Setter Target="AncPanel.(Grid.ColumnSpan)" Value="2"/>
-              <Setter Target="FeatureCard.(Grid.Column)" Value="0"/>
-              <Setter Target="FeatureCard.(Grid.Row)" Value="1"/>
-              <Setter Target="FeatureCard.(Grid.ColumnSpan)" Value="2"/>
-            </VisualState.Setters>
-          </VisualState>
-        </VisualStateGroup>
-      </VisualStateManager.VisualStateGroups>
-    <Border Padding="16,14" CornerRadius="14"
+  <StackPanel Spacing="16" Margin="0,0,0,8">
+    <Border Padding="16,14" CornerRadius="8"
             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
@@ -101,65 +81,111 @@
       </StackPanel>
     </Border>
 
-    <!-- ANC + 功能 并排 -->
-    <Grid x:Name="DeviceControlsGrid" ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
-
-      <Border x:Name="AncPanel" Padding="12,14" Grid.Column="0"
-              CornerRadius="14"
-              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-              BorderThickness="1">
-        <StackPanel Spacing="8">
-          <TextBlock Text="{l10n:Translate Key=Anc_Title}" FontSize="14"
-                     HorizontalAlignment="Center"/>
-          <TextBlock x:Name="AncPlaceholderText" Text="{l10n:Translate Key=Anc_Placeholder}" FontSize="13"
-                     HorizontalAlignment="Center" Opacity="0.45"/>
-          <Grid x:Name="AncMainRow" ColumnDefinitions="Auto" HorizontalAlignment="Center"/>
-          <Grid x:Name="AncSubRow" ColumnDefinitions="Auto" HorizontalAlignment="Center"/>
-          <TextBlock x:Name="AncRealtimeHint" FontSize="12" Opacity="0.5" Visibility="Collapsed"
-                     HorizontalAlignment="Center"/>
-        </StackPanel>
-      </Border>
-
-      <Border x:Name="FeatureCard" Padding="12,14" Grid.Column="1"
-              CornerRadius="14"
-              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-              BorderThickness="1">
-        <StackPanel>
-          <TextBlock Text="{l10n:Translate Key=Feature_Title}" FontSize="14" Margin="0,0,0,6"
-                     HorizontalAlignment="Center"/>
-          <TextBlock x:Name="FeaturePlaceholderText" Text="{l10n:Translate Key=Feature_Placeholder}" FontSize="13"
-                     HorizontalAlignment="Center" Opacity="0.45"/>
-          <StackPanel x:Name="FeatureContentPanel" Visibility="Collapsed">
-            <StackPanel Spacing="4" HorizontalAlignment="Stretch" Margin="0,0,0,6">
-              <CheckBox x:Name="CbDualDevice" Content="{l10n:Translate Key=Feature_DualDevice}" Margin="0,3"/>
-              <CheckBox x:Name="CbGame" Content="{l10n:Translate Key=Feature_GameMode}" Margin="0,3"/>
-              <CheckBox x:Name="CbLongPower" Content="{l10n:Translate Key=Feature_LongPowerMode}" Margin="0,3"/>
-              <CheckBox x:Name="CbWearDetection" Content="{l10n:Translate Key=Feature_WearDetection}" Margin="0,3"/>
-              <CheckBox x:Name="CbSpineHealth" Content="{l10n:Translate Key=Feature_SpineHealth}" Margin="0,3"/>
-              <CheckBox x:Name="CbSpatial" Content="{l10n:Translate Key=Feature_SpatialSound}" Margin="0,3"/>
-              <CheckBox x:Name="CbGameSound" Content="{l10n:Translate Key=Feature_GameSound}" Margin="0,3"/>
-              <CheckBox x:Name="CbBassEngine" Content="{l10n:Translate Key=Feature_BassEngine}" Margin="0,3"/>
-              <CheckBox x:Name="CbVocalEnhance" Content="{l10n:Translate Key=Feature_VocalEnhance}" Margin="0,3"/>
-              <CheckBox x:Name="CbHearingEnhance" Content="{l10n:Translate Key=Feature_HearingEnhance}" Margin="0,3"/>
-            </StackPanel>
-            <Button x:Name="BtnFindDevice" Content="{l10n:Translate Key=Feature_FindDevice}" Height="30" FontSize="13"
-                    Click="BtnFindDevice_Click" Padding="18,0" Visibility="Collapsed" HorizontalAlignment="Center"/>
-          </StackPanel>
-        </StackPanel>
-      </Border>
-    </Grid>
-
-    <Border x:Name="SpatialAudioPanel" Visibility="Collapsed" Padding="16,14"
-            CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1">
+    <Expander x:Name="ConnectedDevicesExpander" Header="{l10n:Translate Key=Sidebar_MultiDevice}"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
       <StackPanel Spacing="8">
-        <TextBlock Text="{l10n:Translate Key=SpatialAudio_Title}" FontSize="14"
-                   HorizontalAlignment="Center"/>
-        <StackPanel Orientation="Horizontal" x:Name="SpatialAudioModes" HorizontalAlignment="Center"/>
+        <ListView x:Name="DeviceList" x:FieldModifier="public" SelectionMode="None" MaxHeight="240"
+                  HorizontalContentAlignment="Stretch"/>
+        <TextBlock x:Name="DeviceListEmptyHint" x:FieldModifier="public" TextWrapping="Wrap"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+      </StackPanel>
+    </Expander>
+
+    <Border x:Name="AncPanel" Padding="20" CornerRadius="8"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+      <StackPanel Spacing="16">
+        <TextBlock Text="{l10n:Translate Key=Anc_Title}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+        <InfoBar x:Name="AncStatusInfo" IsOpen="True" IsClosable="False" Severity="Informational"
+                 Message="{l10n:Translate Key=Anc_Placeholder}"/>
+        <RadioButtons x:Name="AncModes" MaxColumns="4" Visibility="Collapsed" SelectionChanged="AncModes_SelectionChanged"/>
+        <ComboBox x:Name="AncLevels" Header="{l10n:Translate Key=Anc_Level}" MinWidth="200"
+                  HorizontalAlignment="Left" Visibility="Collapsed" SelectionChanged="AncLevels_SelectionChanged"/>
+        <TextBlock x:Name="AncRealtimeHint" TextWrapping="Wrap" Visibility="Collapsed"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="FeatureCard" Padding="20" CornerRadius="8"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+      <StackPanel Spacing="12">
+        <TextBlock Text="{l10n:Translate Key=Feature_Title}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+        <TextBlock x:Name="FeaturePlaceholderText" Text="{l10n:Translate Key=Feature_Placeholder}"
+                   TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        <StackPanel x:Name="FeatureContentPanel" Spacing="8" Visibility="Collapsed">
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbDualDevice}">
+            <TextBlock Text="{l10n:Translate Key=Feature_DualDevice}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbDualDevice" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_DualDevice}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbGame}">
+            <TextBlock Text="{l10n:Translate Key=Feature_GameMode}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbGame" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_GameMode}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbLongPower}">
+            <TextBlock Text="{l10n:Translate Key=Feature_LongPowerMode}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbLongPower" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_LongPowerMode}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbWearDetection}">
+            <TextBlock Text="{l10n:Translate Key=Feature_WearDetection}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbWearDetection" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_WearDetection}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbSpineHealth}">
+            <TextBlock Text="{l10n:Translate Key=Feature_SpineHealth}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbSpineHealth" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_SpineHealth}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbSpatial}">
+            <TextBlock Text="{l10n:Translate Key=Feature_SpatialSound}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbSpatial" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_SpatialSound}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbGameSound}">
+            <TextBlock Text="{l10n:Translate Key=Feature_GameSound}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbGameSound" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_GameSound}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbBassEngine}">
+            <TextBlock Text="{l10n:Translate Key=Feature_BassEngine}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbBassEngine" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_BassEngine}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbVocalEnhance}">
+            <TextBlock Text="{l10n:Translate Key=Feature_VocalEnhance}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbVocalEnhance" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_VocalEnhance}" VerticalAlignment="Center"/>
+          </Grid>
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" MinHeight="48"
+                Visibility="{Binding Visibility, ElementName=CbHearingEnhance}">
+            <TextBlock Text="{l10n:Translate Key=Feature_HearingEnhance}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+            <ToggleSwitch x:Name="CbHearingEnhance" Grid.Column="1" OnContent="" OffContent="" MinWidth="0"
+                          AutomationProperties.Name="{l10n:Translate Key=Feature_HearingEnhance}" VerticalAlignment="Center"/>
+          </Grid>
+          <Button x:Name="BtnFindDevice" Content="{l10n:Translate Key=Feature_FindDevice}"
+                  Click="BtnFindDevice_Click" Visibility="Collapsed" HorizontalAlignment="Left"/>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <Border x:Name="SpatialAudioPanel" Visibility="Collapsed" Padding="20" CornerRadius="8"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+      <StackPanel Spacing="12">
+        <TextBlock Text="{l10n:Translate Key=SpatialAudio_Title}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+        <StackPanel x:Name="SpatialAudioModes" Spacing="4"/>
       </StackPanel>
     </Border>
   </StackPanel>

@@ -22,7 +22,7 @@ internal static class ToastManager
             if (!_active.Contains(toast))
                 _active.Add(toast);
 
-            while (_active.Count > 2)
+            while (_active.Count > 1)
             {
                 var old = _active[0];
                 _active.RemoveAt(0);
@@ -55,7 +55,7 @@ internal static class ToastManager
     }
 }
 
-// 监听 Next 状态快照并沿用原项目的 Toast 生命周期和堆叠逻辑。
+// 监听状态快照；新通知替换旧通知，避免在屏幕底部重叠。
 public sealed class ToastNotificationService : IDisposable
 {
     private readonly NotificationCoordinator _notificationCoordinator;

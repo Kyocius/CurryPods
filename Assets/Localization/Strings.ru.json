@@ -302,5 +302,10 @@
   "Vivo_AudioEffect_3": "Чистые высокие частоты",
   "Vivo_AudioEffect_4": "Объемный звук",
   "Vivo_AudioEffect_5": "Мелодичные аудиокниги",
-  "Vivo_AudioEffect_11": "Мастер-звук"
+  "Vivo_AudioEffect_11": "Мастер-звук",
+  "Anc_Unsupported": "Это устройство не поддерживает шумоподавление",
+  "Anc_Level": "Уровень шумоподавления",
+  "Feature_Unsupported": "Для этого устройства нет доступных переключателей функций",
+  "Personal_PreviewToast": "Предпросмотр уведомления",
+  "Toast_Connected": "Подключено"
 }

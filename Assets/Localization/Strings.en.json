@@ -302,5 +302,10 @@
   "Vivo_AudioEffect_3": "Crisp high pitch",
   "Vivo_AudioEffect_4": "Immersive audio",
   "Vivo_AudioEffect_5": "Melodious audiobooks",
-  "Vivo_AudioEffect_11": "Ultimate master"
+  "Vivo_AudioEffect_11": "Ultimate master",
+  "Anc_Unsupported": "Noise cancellation is not supported by this device",
+  "Anc_Level": "Noise cancellation level",
+  "Feature_Unsupported": "No feature switches are available for this device",
+  "Personal_PreviewToast": "Preview notification",
+  "Toast_Connected": "Connected"
 }

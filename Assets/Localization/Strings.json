@@ -302,5 +302,10 @@
   "Vivo_AudioEffect_3": "清脆高音",
   "Vivo_AudioEffect_4": "沉浸环绕",
   "Vivo_AudioEffect_5": "悠扬听书",
-  "Vivo_AudioEffect_11": "至臻大师"
+  "Vivo_AudioEffect_11": "至臻大师",
+  "Anc_Unsupported": "此设备不支持降噪控制",
+  "Anc_Level": "降噪强度",
+  "Feature_Unsupported": "此设备没有可用的功能开关",
+  "Personal_PreviewToast": "预览通知",
+  "Toast_Connected": "已连接"
 }

@@ -110,7 +110,7 @@ public partial class MainWindow : Window, IViewHost
                 : "v?";
 
             InitializeComponent();
-            Navigation_PaneVisibilityChanged(AppNavigation, EventArgs.Empty);
+            Navigation_DisplayModeChanged(AppNavigation, EventArgs.Empty);
             AppDispatcher.Initialize(this.DispatcherQueue);
             SetupAppWindow();
             AdaptToPlatform();
@@ -267,6 +267,13 @@ public partial class MainWindow : Window, IViewHost
     }
 
     void IViewHost.RequestNavigate(string page) => ShowPage(page);
+    Task IViewHost.PreviewToastAsync()
+    {
+        var snapshot = _frontendState?.Snapshot;
+        return ToastWindow.ShowSnapshotAsync(snapshot,
+            DeviceText.DeviceName(snapshot?.Identity?.ModelName, snapshot?.DeviceName),
+            durationMs: Math.Clamp(_uiSettings.GetInt("ToastDuration", 5), 3, 8) * 1000);
+    }
     void IViewHost.OpenUrl(string url) => _desktopLinks?.TryOpen(url, "页面链接");
     Task IViewHost.ShowCheckResultDialogAsync(string message, string? title)
         => ShowCheckResultDialog(message, title);

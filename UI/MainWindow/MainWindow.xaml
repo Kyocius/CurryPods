@@ -13,12 +13,11 @@
         <NavigationView x:Name="AppNavigation" Grid.Row="1"
                         PaneDisplayMode="Auto" OpenPaneLength="240" CompactPaneLength="48"
                         ExpandedModeThresholdWidth="800" CompactModeThresholdWidth="640"
-                        IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
+                        AlwaysShowHeader="False" IsSettingsVisible="False" IsBackButtonVisible="Collapsed"
                         IsTitleBarAutoPaddingEnabled="False" SelectionFollowsFocus="Disabled"
                         SelectionChanged="Navigation_SelectionChanged" ItemInvoked="Navigation_ItemInvoked"
                         BackRequested="Navigation_BackRequested"
-                        PaneOpened="Navigation_PaneVisibilityChanged" PaneClosed="Navigation_PaneVisibilityChanged"
-                        DisplayModeChanged="Navigation_PaneVisibilityChanged">
+                        DisplayModeChanged="Navigation_DisplayModeChanged">
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="NavHome" Tag="home" Icon="Home" Content="{loc:Translate Key=Sidebar_NavHome}"/>
                 <NavigationViewItem x:Name="NavEq" Tag="eq" Icon="Audio" Content="{loc:Translate Key=Sidebar_NavEq}"/>
@@ -28,35 +27,17 @@
                 <NavigationViewItem x:Name="NavSettings" Tag="settings" Icon="Setting" Content="{loc:Translate Key=Sidebar_NavSettings}"/>
                 <NavigationViewItem x:Name="NavAbout" Tag="about" Icon="Help" Content="{loc:Translate Key=Settings_About}"/>
             </NavigationView.FooterMenuItems>
-            <NavigationView.PaneCustomContent>
-                <StackPanel x:Name="ConnectedDevicesPane" Margin="12,16,12,12" Spacing="8">
-                    <TextBlock Text="{loc:Translate Key=Sidebar_MultiDevice}" Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                    <ListView x:Name="DeviceList" SelectionMode="None" IsItemClickEnabled="False"
-                              MaxHeight="200" HorizontalContentAlignment="Stretch">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="Padding" Value="4"/>
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                    </ListView>
-                    <TextBlock x:Name="DeviceListEmptyHint" Text="{loc:Translate Key=Sidebar_NoDevices}"
-                               TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                </StackPanel>
-            </NavigationView.PaneCustomContent>
-            <NavigationView.Header>
+            <Grid x:Name="PageLayout" Margin="24" RowDefinitions="Auto,*" RowSpacing="16">
                 <TextBlock x:Name="PageHeading" Style="{StaticResource TitleTextBlockStyle}"/>
-            </NavigationView.Header>
-            <ContentControl x:Name="PageContent" Margin="24,0,24,24"
-                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-                <ContentControl.ContentTransitions>
-                    <TransitionCollection>
-                        <EntranceThemeTransition IsStaggeringEnabled="False"/>
-                    </TransitionCollection>
-                </ContentControl.ContentTransitions>
-            </ContentControl>
+                <ContentControl x:Name="PageContent" Grid.Row="1"
+                                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                    <ContentControl.ContentTransitions>
+                        <TransitionCollection>
+                            <EntranceThemeTransition IsStaggeringEnabled="False"/>
+                        </TransitionCollection>
+                    </ContentControl.ContentTransitions>
+                </ContentControl>
+            </Grid>
         </NavigationView>
     </Grid>
 </Window>
