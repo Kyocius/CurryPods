@@ -5,17 +5,13 @@
     xmlns:local="using:OppoPodsManager"
     xmlns:l10n="using:OppoPodsManager.Assets.Localization">
 
-  <StackPanel Spacing="14" Margin="0,0,0,40">
+  <StackPanel Spacing="12" Margin="0,0,0,8">
     <!-- 标题行 -->
 
     <!-- ====== 预设列表 ====== -->
-    <Border Padding="14,14" CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1">
+    <Border Style="{StaticResource PageCardStyle}">
       <StackPanel Spacing="8">
-        <TextBlock Text="{l10n:Translate Key=Eq_PresetList}" FontSize="14"
-                   HorizontalAlignment="Center" Opacity="0.8" Margin="0,0,0,2"/>
+        <TextBlock Text="{l10n:Translate Key=Eq_PresetList}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
 
         <Grid ColumnDefinitions="*,*">
           <!-- 左：系统预设 -->
@@ -57,13 +53,9 @@
     </Border>
 
     <!-- ====== 下：均衡器滑块（编辑/新建时展开，全宽） ====== -->
-    <Border x:Name="EqSliderCard" Padding="14,14" CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-            BorderThickness="1" Visibility="Collapsed">
+    <Border Style="{StaticResource PageCardStyle}" x:Name="EqSliderCard" Visibility="Collapsed">
       <StackPanel Spacing="12">
-        <TextBlock Text="{l10n:Translate Key=Eq_Equalizer}" FontSize="14"
-                   HorizontalAlignment="Center" Opacity="0.8"/>
+        <TextBlock Text="{l10n:Translate Key=Eq_Equalizer}" Style="{StaticResource BodyStrongTextBlockStyle}"/>
 
         <!-- 标准设备使用原项目的六段编辑器；非标准设备由代码生成对应频段。 -->
         <Grid x:Name="EqFixedBandsGrid" ColumnDefinitions="Auto,*,*,*,*,*,*" Height="220"

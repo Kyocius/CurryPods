@@ -53,18 +53,6 @@ public partial class MainWindow
             ApplyNextSnapshot(_frontendState.Snapshot);
     }
 
-    private void RefreshCardOpacity()
-    {
-        var opacity = ReadCardOpacity() / 100d;
-        foreach (var entry in Application.Current.Resources.ThemeDictionaries)
-        {
-            if (entry.Key is "HighContrast" || entry.Value is not ResourceDictionary resources)
-                continue;
-            if (resources.TryGetValue("PageCardBackgroundBrush", out var resource) && resource is SolidColorBrush brush)
-                brush.Opacity = opacity;
-        }
-    }
-
     private int NextThemeIndex()
         => _uiSettings.GetString("Theme")?.ToLowerInvariant() switch
         {
@@ -80,17 +68,8 @@ public partial class MainWindow
         _ => "System"
     };
 
-    private int ReadCardOpacity()
-        => Math.Clamp(_uiSettings.GetInt("CardOpacity", 90), 0, 100);
-
-    private bool ReadUiBool(string key, bool fallback)
-        => _uiSettings.GetBool(key, fallback);
-
     private int ReadUiInt(string key, int fallback)
         => _uiSettings.GetInt(key, fallback);
-
-    private void WriteUiBool(string key, bool value)
-        => _uiSettings.SetBool(key, value);
 
     private void WriteUiString(string key, string? value)
         => _uiSettings.SetString(key, value);

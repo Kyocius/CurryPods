@@ -14,8 +14,6 @@ public sealed class SettingsStore
     public bool GetBool(string key, bool fallback)
         => key switch
         {
-            "AdvancedRender" => _settings?.Current.AdvancedRender ?? fallback,
-            "AcrylicBlur" => _settings?.Current.AcrylicBlur ?? fallback,
             "LowBatteryToast" => _settings?.Current.LowBatteryToastEnabled ?? fallback,
             "ConnectionToast" => _settings?.Current.ConnectionToastEnabled ?? fallback,
             "TrayEnabled" => _settings?.Current.MinimizeToTray ?? fallback,
@@ -27,7 +25,6 @@ public sealed class SettingsStore
     public int GetInt(string key, int fallback)
         => key switch
         {
-            "CardOpacity" => _settings?.Current.CardOpacity ?? fallback,
             "BgBlur" => _settings?.Current.BackgroundBlur ?? fallback,
             "ToastDuration" => _settings is null
                 ? fallback
@@ -109,8 +106,6 @@ public sealed class SettingsStore
     {
         _settings?.Update(settings => key switch
         {
-            "AdvancedRender" => settings with { AdvancedRender = value },
-            "AcrylicBlur" => settings with { AcrylicBlur = value },
             "LowBatteryToast" => settings with { LowBatteryToastEnabled = value },
             "ConnectionToast" => settings with { ConnectionToastEnabled = value },
             "TrayEnabled" => settings with { MinimizeToTray = value },
@@ -122,7 +117,6 @@ public sealed class SettingsStore
     public void SetInt(string key, int value)
         => _settings?.Update(settings => key switch
         {
-            "CardOpacity" => settings with { CardOpacity = value },
             "BgBlur" => settings with { BackgroundBlur = value },
             "ToastDuration" => settings with { ToastDurationSeconds = Math.Clamp(value, 3, 8) },
             _ => settings

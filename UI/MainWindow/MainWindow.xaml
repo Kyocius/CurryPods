@@ -8,7 +8,6 @@
         <MicaBackdrop />
     </Window.SystemBackdrop>
     <Grid x:Name="RootPanel" RowDefinitions="Auto,*">
-        <Image x:Name="BgFullImage" Grid.RowSpan="2" Stretch="UniformToFill" Opacity="0.85" Visibility="Collapsed"/>
         <TitleBar x:Name="WindowTitleBar" Title="CurryPods">
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="ms-appx:///Assets/VisualAssets/AppIcon.png" />

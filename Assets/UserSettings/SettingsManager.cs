@@ -136,7 +136,6 @@ public sealed record AppSettings(
     string Language,
     bool MinimizeToTray,
     bool StartWithWindows,
-    int CardOpacity,
     int ToastDurationSeconds,
     Dictionary<string, string> ModelOverrides,
     Dictionary<string, string> DeviceNames,
@@ -145,7 +144,7 @@ public sealed record AppSettings(
     // 跳过全品牌探测，减少首次识别等待。键为归一化（去分隔符、大写）的 MAC。
     Dictionary<string, string> BrandByMac)
 {
-    // 保存个性化页的背景和窗口渲染选项。
+    // 保留旧版背景字段以兼容历史设置；当前窗口始终使用 Mica，不再应用这些值。
     public string BackgroundPath { get; init; } = string.Empty;
     public int BackgroundBlur { get; init; }
     public bool AdvancedRender { get; init; }
@@ -166,7 +165,6 @@ public sealed record AppSettings(
         "",
         true,
         false,
-        90,
         5,
         new Dictionary<string, string>(),
         new Dictionary<string, string>(),

@@ -40,13 +40,9 @@ public partial class MainWindow : Window, IViewHost
     private IDisposable? _interactiveSurface;
 
     private ApplicationLog? _logManager;
-    private DispatcherTimer? _bgApplyDebounceTimer;
-    private ImageSource? _backgroundImageSource;
     private bool _realClose;
     private bool _runtimeUiDisposed;
     private string _currentPage = "";
-    private readonly BackgroundImageManager _backgroundImages = new();
-    private readonly BackgroundSelectionService _backgroundSelection;
     private string? _customDeviceName;
 
     // 缓存画刷
@@ -97,7 +93,6 @@ public partial class MainWindow : Window, IViewHost
         _requestApplicationExit = requestApplicationExit;
         _shouldKeepWindowAlive = shouldKeepWindowAlive;
         _uiSettings = new SettingsStore(nextSettings);
-        _backgroundSelection = new BackgroundSelectionService(_uiSettings, _backgroundImages);
         _logManager = ApplicationLog.Current;
 
         try
@@ -119,7 +114,6 @@ public partial class MainWindow : Window, IViewHost
 
             var themeIndex = NextThemeIndex();
             ApplyTheme(themeIndex);
-            RefreshCardOpacity();
 
             RefreshEarphoneImages();
             BuildEarphoneCustomUi();
@@ -291,34 +285,12 @@ public partial class MainWindow : Window, IViewHost
         _uiSettings.SetString("Theme", NextThemeName(index));
     }
     void IViewHost.ApplyLanguage(LanguageOption option) => ApplyLanguage(option);
-    void IViewHost.RefreshCardOpacity() => RefreshCardOpacity();
-    void IViewHost.SelectBackground(string key) => SelectBackground(key);
-    void IViewHost.AddBackgroundImage() => _ = BtnBgAdd_Click();
-    void IViewHost.ApplyBackgroundBlur()
-    {
-        var timer = EnsureBackgroundApplyDebounceTimer();
-        timer.Stop();
-        timer.Start();
-    }
-    void IViewHost.SetAcrylicBlur(bool on) => ToggleAcrylicBlur(on);
-    void IViewHost.SetAcrylicBlurSilent(bool on) => ApplyAcrylicBlurSilently(on);
-    void IViewHost.SetAdvancedRender(bool on)
-    {
-        if (on) EnableAdvancedRender();
-        else DisableAdvancedRender();
-    }
     void IViewHost.SetCustomDeviceName(string? name)
     {
         _customDeviceName = name;
         UpdateTitle();
     }
     void IViewHost.RebuildEarphoneUi() => BuildEarphoneCustomUi();
-    void IViewHost.RefreshBackground()
-    {
-        RefreshBgThumbs();
-        ApplySavedBackground();
-    }
-
     Task IViewHost.OpenUpdatePageAsync() => OpenUpdatePageAsync();
     Task IViewHost.OpenFeedbackAsync() => ShowFeedbackDialogAsync();
     void IViewHost.ResyncMultiDeviceList() => SyncNextMultiDeviceList(_frontendState?.Snapshot);

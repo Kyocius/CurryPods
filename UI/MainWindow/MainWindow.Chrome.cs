@@ -9,66 +9,7 @@ public partial class MainWindow
 {
     private void AdaptToPlatform()
     {
-        ApplySystemBackdrop(ReadUiBool("AcrylicBlur", false));
-
-        if (ReadUiBool("AdvancedRender", false))
-            EnableAdvancedRender();
-    }
-
-    private void ApplySystemBackdrop(bool acrylic)
-    {
-        if (acrylic)
-        {
-            if (SystemBackdrop is DesktopAcrylicBackdrop)
-                return;
-            try
-            {
-                SystemBackdrop = new DesktopAcrylicBackdrop();
-            }
-            catch
-            {
-                SystemBackdrop = new MicaBackdrop();
-            }
-        }
-        else if (SystemBackdrop is not MicaBackdrop)
-        {
-            SystemBackdrop = new MicaBackdrop();
-        }
-    }
-
-    private void ToggleAcrylicBlur(bool on)
-    {
-        ApplyAcrylicBlurSilently(on);
-        ApplySystemBackdrop(on);
-    }
-
-    internal void ApplyAcrylicBlurSilently(bool on)
-    {
-        WriteUiBool("AcrylicBlur", on);
-        _logManager?.Debug("UI", $"设置: Acrylic 模糊(静默) -> {on}");
-        if (on)
-            SelectBackground("default");
-        UpdateBackgroundSettingsAvailability(on);
-    }
-
-    private void UpdateBackgroundSettingsAvailability(bool acrylicBlurEnabled)
-    {
-        var enabled = !acrylicBlurEnabled;
-        PersonalView.BackgroundSettingsContent.IsHitTestVisible = enabled;
-        PersonalView.BackgroundSettingsContent.Opacity = enabled ? 1 : 0.45;
-    }
-
-    private void EnableAdvancedRender()
-    {
-        WindowTitleBar.Visibility = Visibility.Collapsed;
-        ExtendsContentIntoTitleBar = false;
-    }
-
-    private void DisableAdvancedRender()
-    {
-        WindowTitleBar.Visibility = Visibility.Visible;
-        ExtendsContentIntoTitleBar = true;
-        SetTitleBar(WindowTitleBar);
+        SystemBackdrop = new MicaBackdrop();
     }
 
     private void OnAppWindowClosing(AppWindow sender, AppWindowClosingEventArgs e)
@@ -129,11 +70,8 @@ public partial class MainWindow
             subscription.Dispose();
         _linguaSubs.Clear();
         EqView?.StopDebounceTimer();
-        _bgApplyDebounceTimer?.Stop();
         LogView?.Stop();
         DisposeWindowImages();
-        SetBackgroundImageSource(null, "");
-        _backgroundImages.Dispose();
         PageContent.Content = null;
         _pageContainers.Clear();
         _pageScrollOffsets.Clear();

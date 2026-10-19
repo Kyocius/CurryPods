@@ -8,7 +8,7 @@ namespace OppoPodsManager.UI.Views;
 /// <summary>
 /// 视图宿主（MainWindow 外壳）向各页面视图暴露的回调能力：
 /// 导航、打开外链、弹出对话框，以及个性化页所需的若干外壳级外观副作用
-/// （主题应用、语言切换、窗口背景、卡片透明度、标题、高级渲染/Acrylic）。
+/// （主题应用、语言切换、耳机图案与标题）。
 /// 视图不直接持有外壳控件，仅通过该接口交互。
 /// </summary>
 public interface IViewHost
@@ -25,26 +25,10 @@ public interface IViewHost
     void ApplyTheme(int index);
     /// <summary>切换界面语言并刷新所有本地化敏感的控件与状态。</summary>
     void ApplyLanguage(LanguageOption option);
-    /// <summary>按当前卡片透明度设置刷新外壳复用画刷（不触发完整状态刷新）。</summary>
-    void RefreshCardOpacity();
-    /// <summary>选择并应用指定背景（含默认背景）。</summary>
-    void SelectBackground(string key);
-    /// <summary>打开文件选择器添加一张自定义背景图片。</summary>
-    void AddBackgroundImage();
-    /// <summary>背景模糊值已变更，触发窗口背景防抖重绘。</summary>
-    void ApplyBackgroundBlur();
-    /// <summary>应用并持久化 Acrylic 模糊开关（用户手动切换时调用，会弹出提示）。</summary>
-    void SetAcrylicBlur(bool on);
-    /// <summary>静默应用并持久化 Acrylic 模糊开关（启动期调用，避免每次开 APP 都弹提示）。</summary>
-    void SetAcrylicBlurSilent(bool on);
-    /// <summary>应用并持久化高级渲染开关。</summary>
-    void SetAdvancedRender(bool on);
     /// <summary>设备自定义名已变更，持久化并刷新窗口标题。</summary>
     void SetCustomDeviceName(string? name);
     /// <summary>重建自定义耳机图案行（切语言后调用）。</summary>
     void RebuildEarphoneUi();
-    /// <summary>按当前背景历史重建缩略图并应用窗口背景。</summary>
-    void RefreshBackground();
 
     // ---- 设置页外壳级能力 ----
     /// <summary>打开 GitHub Releases 发布页（不联网检测版本，直接跳转由用户自行下载）。</summary>
