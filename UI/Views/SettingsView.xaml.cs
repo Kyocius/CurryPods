@@ -24,6 +24,8 @@ public sealed partial class SettingsView : UserControl, IPageView
     private DesktopLinkService? DesktopLinks;
 
     private bool _syncingConnectionStrategy;
+    private bool _syncingStartup;
+    private bool _updatingStartup;
     private string _priorityOptionsSignature = "";
 
     private sealed class PriorityDeviceOption
@@ -73,6 +75,7 @@ public sealed partial class SettingsView : UserControl, IPageView
     {
         if (FrontendState?.Snapshot is { } snapshot)
             ApplySnapshot(snapshot);
+        _ = RefreshStartupAsync();
     }
 
     private void CbTray_Changed(object sender, RoutedEventArgs e)
@@ -82,13 +85,50 @@ public sealed partial class SettingsView : UserControl, IPageView
         Log?.Debug("UI", $"设置: 关闭到托盘 -> {on}");
     }
 
-    private void CbAuto_Changed(object sender, RoutedEventArgs e)
+    private async void CbAuto_Changed(object sender, RoutedEventArgs e)
     {
+        if (_syncingStartup || _updatingStartup) return;
         var on = CbAuto.IsOn;
-        UiSettings.SetBool("AutoStart", on);
-        WindowsStartup.TrySetEnabled(on);
-        Log?.Debug("UI", $"设置: 开机自启 -> {on}");
+        _updatingStartup = true;
+        CbAuto.IsEnabled = false;
+        try { ApplyStartupStatus(await UiSettings.SetAutoStartAsync(on)); }
+        catch (Exception exception)
+        {
+            Log?.Error("Startup", "保存开机启动设置失败。", exception);
+            ApplyStartupStatus(new(false, true, "Settings_StartupFailed", Succeeded: false));
+        }
+        finally { _updatingStartup = false; }
     }
+
+    private async Task RefreshStartupAsync()
+    {
+        if (_updatingStartup) return;
+        _updatingStartup = true;
+        CbAuto.IsEnabled = false;
+        try { ApplyStartupStatus(await UiSettings.RefreshAutoStartAsync()); }
+        catch (Exception exception)
+        {
+            Log?.Error("Startup", "刷新开机启动设置失败。", exception);
+            ApplyStartupStatus(new(false, true, "Settings_StartupFailed", Succeeded: false));
+        }
+        finally { _updatingStartup = false; }
+    }
+
+    private void ApplyStartupStatus(StartupStatus status)
+    {
+        _syncingStartup = true;
+        try
+        {
+            CbAuto.IsOn = status.Succeeded ? status.Enabled : UiSettings.GetBool("AutoStart", false);
+            CbAuto.IsEnabled = status.CanChange;
+            StartupInfo.Message = status.MessageKey is { } key ? TranslationCatalog.Get(key) : string.Empty;
+            StartupInfo.IsOpen = status.MessageKey is not null;
+        }
+        finally { _syncingStartup = false; }
+    }
+
+    private void OpenStartupSettings_Click(object sender, RoutedEventArgs e)
+        => Host?.OpenUrl("ms-settings:startupapps");
 
     private async void BtnCheckUpdate_Click(object sender, RoutedEventArgs e)
     {

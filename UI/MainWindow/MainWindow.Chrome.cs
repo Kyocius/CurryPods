@@ -105,6 +105,7 @@ public partial class MainWindow
         _runtimeUiDisposed = true;
         _realClose = true;
         HomeView?.MarkClosed();
+        Activated -= OnWindowActivated;
         _activeDialog?.Hide();
         AppNavigation.SelectionChanged -= Navigation_SelectionChanged;
         AppNavigation.ItemInvoked -= Navigation_ItemInvoked;

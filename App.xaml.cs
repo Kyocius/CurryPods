@@ -77,7 +77,7 @@ public sealed partial class App : Application
         _log = new ApplicationLog(Path.Combine(Path.GetDirectoryName(settingsPath)!, "Logs"));
         _log.Info("App", "开始初始化桌面生命周期和设备控制器。");
         InstallGlobalExceptionHandlers();
-        WindowsStartup.TrySetEnabled(_settings.Current.StartWithWindows);
+        await _settings.InitializeAutoStartAsync();
 
         _desktopLinks = new DesktopLinkService(_log);
         _feedbackExporter = new FeedbackExportService(_log);

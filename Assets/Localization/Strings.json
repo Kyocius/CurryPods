@@ -318,5 +318,9 @@
   "Feature_BassEngine_Description": "增强低频表现。",
   "Feature_VocalEnhance_Description": "突出语音与人声。",
   "Feature_HearingEnhance_Description": "使用耳机的个性化听感增强。",
-  "Common_Close": "关闭"
+  "Common_Close": "关闭",
+  "Settings_StartupDisabledByUser": "Windows 已禁用此启动项，请在系统“启动应用”设置中重新启用。",
+  "Settings_StartupManaged": "此启动项由系统策略管理。",
+  "Settings_StartupFailed": "无法读取或更新启动项，请重试或在 Windows 启动应用设置中检查。",
+  "Settings_OpenStartupSettings": "打开启动应用设置"
 }

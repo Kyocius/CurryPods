@@ -38,6 +38,11 @@
         <TextBlock Text="{l10n:Translate Key=Settings_App}" FontSize="14" FontWeight="SemiBold" Opacity="0.85"/>
         <StackPanel Spacing="6">
           <ToggleSwitch x:Name="CbAuto" Header="{l10n:Translate Key=Settings_AutoStart}"/>
+          <InfoBar x:Name="StartupInfo" IsOpen="False" IsClosable="False" Severity="Warning">
+            <InfoBar.ActionButton>
+              <Button Content="{l10n:Translate Key=Settings_OpenStartupSettings}" Click="OpenStartupSettings_Click"/>
+            </InfoBar.ActionButton>
+          </InfoBar>
           <ToggleSwitch x:Name="CbTray" Header="{l10n:Translate Key=Settings_CloseToTray}"/>
         </StackPanel>
       </StackPanel>

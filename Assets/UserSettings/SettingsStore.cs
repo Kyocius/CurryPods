@@ -98,15 +98,15 @@ public sealed class SettingsStore
         _settings?.Update(settings => settings with { HiddenMultiDeviceAddresses = normalized });
     }
 
-    // 保存布尔设置，并通过设置管理器同步开机自启项。
+    public Task<StartupStatus> SetAutoStartAsync(bool enabled)
+        => _settings?.SetAutoStartAsync(enabled) ?? WindowsStartup.SetEnabledAsync(enabled);
+
+    public Task<StartupStatus> RefreshAutoStartAsync()
+        => _settings?.RefreshAutoStartAsync() ?? WindowsStartup.GetStatusAsync();
+
+    // Startup registration is asynchronous and must use SetAutoStartAsync.
     public void SetBool(string key, bool value)
     {
-        if (key == "AutoStart")
-        {
-            _settings?.SetAutoStart(value);
-            return;
-        }
-
         _settings?.Update(settings => key switch
         {
             "AdvancedRender" => settings with { AdvancedRender = value },

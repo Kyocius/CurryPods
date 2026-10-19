@@ -318,5 +318,9 @@
   "Feature_BassEngine_Description": "Усилить низкие частоты.",
   "Feature_VocalEnhance_Description": "Выделить речь и вокал.",
   "Feature_HearingEnhance_Description": "Использовать персональное улучшение слухового восприятия.",
-  "Common_Close": "Закрыть"
+  "Common_Close": "Закрыть",
+  "Settings_StartupDisabledByUser": "Windows отключила автозапуск. Включите его в системных параметрах автозагрузки.",
+  "Settings_StartupManaged": "Автозапуск управляется системной политикой.",
+  "Settings_StartupFailed": "Не удалось прочитать или изменить автозапуск. Проверьте параметры автозагрузки Windows.",
+  "Settings_OpenStartupSettings": "Открыть параметры автозагрузки"
 }

@@ -19,6 +19,12 @@ public partial class MainWindow
     private readonly Dictionary<string, double> _pageScrollOffsets = new();
     private bool _updatingNavigation;
 
+    private void OnWindowActivated(object sender, WindowActivatedEventArgs args)
+    {
+        if (!_realClose && args.WindowActivationState != WindowActivationState.Deactivated && _currentPage == "settings")
+            SettingsView.RefreshDeviceInfo();
+    }
+
     private void Navigation_DisplayModeChanged(NavigationView sender, object args)
     {
         if (PageLayout is not null)

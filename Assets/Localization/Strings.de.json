@@ -318,5 +318,9 @@
   "Feature_BassEngine_Description": "Basswiedergabe verstärken.",
   "Feature_VocalEnhance_Description": "Stimmen und Gesang hervorheben.",
   "Feature_HearingEnhance_Description": "Personalisierte Hörverbesserung verwenden.",
-  "Common_Close": "Schließen"
+  "Common_Close": "Schließen",
+  "Settings_StartupDisabledByUser": "Windows hat diesen Autostart deaktiviert. Aktivieren Sie ihn unter Autostart-Apps erneut.",
+  "Settings_StartupManaged": "Dieser Autostart wird durch eine Systemrichtlinie verwaltet.",
+  "Settings_StartupFailed": "Autostart konnte nicht gelesen oder geändert werden. Prüfen Sie die Windows-Einstellungen für Autostart-Apps.",
+  "Settings_OpenStartupSettings": "Autostart-Einstellungen öffnen"
 }

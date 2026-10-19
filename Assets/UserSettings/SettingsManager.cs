@@ -43,11 +43,33 @@ public sealed class SettingsManager
         Changed?.Invoke(this, changed);
     }
 
-    // 保存开机启动设置并同步 Windows 登录启动项。
-    public void SetAutoStart(bool enabled)
+    // Only migrate the old preference once; subsequent launches respect changes in Windows Settings.
+    public async Task InitializeAutoStartAsync()
     {
-        Update(settings => settings with { StartWithWindows = enabled });
-        WindowsStartup.TrySetEnabled(enabled);
+        var status = Current.StartupTaskMigrated
+            ? await WindowsStartup.GetStatusAsync()
+            : await WindowsStartup.SetEnabledAsync(Current.StartWithWindows);
+        SaveStartupStatus(status);
+    }
+
+    public async Task<StartupStatus> SetAutoStartAsync(bool enabled)
+    {
+        var status = await WindowsStartup.SetEnabledAsync(enabled);
+        SaveStartupStatus(status);
+        return status;
+    }
+
+    public async Task<StartupStatus> RefreshAutoStartAsync()
+    {
+        var status = await WindowsStartup.GetStatusAsync();
+        SaveStartupStatus(status);
+        return status;
+    }
+
+    private void SaveStartupStatus(StartupStatus status)
+    {
+        if (status.Succeeded)
+            Update(settings => settings with { StartWithWindows = status.Enabled, StartupTaskMigrated = true });
     }
 
     private static AppSettings Load(string path)
@@ -134,6 +156,7 @@ public sealed record AppSettings(
     // 仅控制"是否弹出"，不影响控制层对通知的分类与状态更新。
     public bool LowBatteryToastEnabled { get; init; } = true;
     public bool ConnectionToastEnabled { get; init; } = true;
+    public bool StartupTaskMigrated { get; init; }
     public List<string> BackgroundHistory { get; init; } = [];
 
     public static AppSettings Default { get; } = new(

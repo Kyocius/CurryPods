@@ -128,6 +128,7 @@ public partial class MainWindow : Window, IViewHost
             UpdateTitle();
 
             Closed += OnWindowClosed;
+            Activated += OnWindowActivated;
             ShowPage("home");
         }
         catch (Exception ex)

@@ -318,5 +318,9 @@
   "Feature_BassEngine_Description": "Enhance bass response.",
   "Feature_VocalEnhance_Description": "Emphasize voices and vocals.",
   "Feature_HearingEnhance_Description": "Use personalized hearing enhancement.",
-  "Common_Close": "Close"
+  "Common_Close": "Close",
+  "Settings_StartupDisabledByUser": "Windows has disabled this startup task. Re-enable it in Startup apps settings.",
+  "Settings_StartupManaged": "This startup task is managed by system policy.",
+  "Settings_StartupFailed": "Could not read or update startup registration. Retry or check Windows Startup apps settings.",
+  "Settings_OpenStartupSettings": "Open Startup apps settings"
 }
