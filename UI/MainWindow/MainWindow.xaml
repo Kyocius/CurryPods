@@ -22,6 +22,10 @@
                         SelectionChanged="Navigation_SelectionChanged" ItemInvoked="Navigation_ItemInvoked"
                         BackRequested="Navigation_BackRequested"
                         DisplayModeChanged="Navigation_DisplayModeChanged">
+            <NavigationView.Resources>
+                <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent"/>
+                <Thickness x:Key="NavigationViewContentGridBorderThickness">0</Thickness>
+            </NavigationView.Resources>
             <NavigationView.MenuItems>
                 <NavigationViewItem x:Name="NavHome" Tag="home" Icon="Home" Content="{loc:Translate Key=Sidebar_NavHome}"/>
                 <NavigationViewItem x:Name="NavEq" Tag="eq" Icon="Audio" Content="{loc:Translate Key=Sidebar_NavEq}"/>
@@ -29,9 +33,10 @@
             </NavigationView.MenuItems>
             <NavigationView.FooterMenuItems>
                 <NavigationViewItem x:Name="NavSettings" Tag="settings" Icon="Setting" Content="{loc:Translate Key=Sidebar_NavSettings}"/>
-                <NavigationViewItem x:Name="NavAbout" Tag="about" Icon="Help" Content="{loc:Translate Key=Settings_About}"/>
             </NavigationView.FooterMenuItems>
-            <Grid x:Name="PageLayout" Margin="24" RowDefinitions="Auto,*" RowSpacing="16">
+            <ScrollViewer x:Name="PageScrollHost" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" HorizontalScrollMode="Disabled">
+              <Grid x:Name="PageLayout" Margin="24" RowDefinitions="Auto,*" RowSpacing="16">
                 <TextBlock x:Name="PageHeading" Style="{StaticResource TitleTextBlockStyle}"/>
                 <ContentControl x:Name="PageContent" Grid.Row="1"
                                 HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
@@ -41,7 +46,8 @@
                         </TransitionCollection>
                     </ContentControl.ContentTransitions>
                 </ContentControl>
-            </Grid>
+              </Grid>
+            </ScrollViewer>
         </NavigationView>
     </Grid>
 </Window>

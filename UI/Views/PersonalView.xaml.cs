@@ -51,10 +51,11 @@ public partial class PersonalView : UserControl, IPageView
         {
             var v = (int)SlOpacity.Value;
             TbOpacity.Text = $"{v}%";
+            if (_initializing) return;
             UiSettings.SetInt("CardOpacity", v);
             Host?.RefreshCardOpacity();
         };
-        BtnResetOpacity.Click += (_, _) => SlOpacity.Value = 50;
+        BtnResetOpacity.Click += (_, _) => SlOpacity.Value = 90;
         CbToastDuration.SelectionChanged += CbToastDuration_Changed;
 
         RoutedEventHandler onLowBatteryChanged = (_, _) =>
@@ -132,7 +133,7 @@ public partial class PersonalView : UserControl, IPageView
             InitializeLanguageSelection();
             CbTheme.SelectedIndex = NextThemeIndex();
 
-            var opacityVal = Math.Clamp(UiSettings.GetInt("CardOpacity", 50), 0, 90);
+            var opacityVal = Math.Clamp(UiSettings.GetInt("CardOpacity", 90), 0, 100);
             SlOpacity.Value = opacityVal;
             TbOpacity.Text = $"{opacityVal}%";
 

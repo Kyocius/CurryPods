@@ -16,6 +16,7 @@ public partial class MainWindow
     private readonly LogView LogView = new();
     private readonly AboutView AboutView = new();
     private readonly Dictionary<string, FrameworkElement> _pageContainers = new();
+    private readonly Dictionary<string, double> _pageScrollOffsets = new();
     private bool _updatingNavigation;
 
     private void Navigation_DisplayModeChanged(NavigationView sender, object args)
@@ -50,12 +51,13 @@ public partial class MainWindow
             "home" => NavHome,
             "eq" => NavEq,
             "personal" => NavPersonal,
-            "about" => NavAbout,
             _ => NavSettings
         };
         // SelectionChanged also runs for programmatic navigation from page buttons.
         // Set the page before updating selection to avoid re-entering navigation.
         var changed = _currentPage != page;
+        if (changed)
+            _pageScrollOffsets[_currentPage] = PageScrollHost.VerticalOffset;
         _currentPage = page;
         if (!ReferenceEquals(AppNavigation.SelectedItem, item))
         {
@@ -70,9 +72,12 @@ public partial class MainWindow
             }
         }
         UpdatePageHeading();
-        AppNavigation.IsBackButtonVisible = page is "log" or "deviceinfo"
+        AppNavigation.IsBackButtonVisible = page is "log" or "deviceinfo" or "about"
             ? NavigationViewBackButtonVisible.Visible : NavigationViewBackButtonVisible.Collapsed;
-        AppNavigation.IsBackEnabled = page is "log" or "deviceinfo";
+        AppNavigation.IsBackEnabled = page is "log" or "deviceinfo" or "about";
+        PageScrollHost.VerticalScrollBarVisibility = page == "log" ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        PageScrollHost.VerticalScrollMode = page == "log" ? ScrollMode.Disabled : ScrollMode.Enabled;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(PageScrollHost, page + "Page");
         if (!changed)
             return;
 
@@ -89,17 +94,12 @@ public partial class MainWindow
                 "deviceinfo" => DeviceInfoView,
                 _ => SettingsView
             };
-            container = page == "log" ? view : new ScrollViewer
-            {
-                Content = view,
-                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-                HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                HorizontalScrollMode = ScrollMode.Disabled
-            };
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetAutomationId(container, page + "Page");
+            container = view;
             _pageContainers[page] = container;
         }
         PageContent.Content = container;
+        PageScrollHost.UpdateLayout();
+        PageScrollHost.ChangeView(null, _pageScrollOffsets.GetValueOrDefault(page), null, disableAnimation: true);
         if (page == "home")
             HomeView.SetAncPanelVisible(true);
         if (page == "eq")

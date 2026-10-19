@@ -75,7 +75,7 @@
   "Personal_ThemeFollowSystem": "跟随系统",
   "Personal_ThemeDark": "深色",
   "Personal_ThemeLight": "浅色",
-  "Personal_CardOpacity": "卡片透明",
+  "Personal_CardOpacity": "卡片不透明度",
   "Personal_ToastDuration": "弹窗时长",
   "Personal_ToastSettings": "弹窗设置",
   "Personal_LowBatteryToast": "低电量提醒",

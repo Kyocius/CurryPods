@@ -7,8 +7,8 @@
   <StackPanel Spacing="14" HorizontalAlignment="Stretch" Margin="0,0,0,40">
 
     <!-- 外观 -->
-    <Border Padding="18,16" CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+    <Border Padding="18,16" CornerRadius="8"
+            Background="{ThemeResource PageCardBackgroundBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
       <StackPanel Spacing="10">
@@ -27,9 +27,9 @@
         </StackPanel>
         <StackPanel Orientation="Horizontal" Spacing="12">
           <TextBlock Text="{l10n:Translate Key=Personal_CardOpacity}" FontSize="13" VerticalAlignment="Center"/>
-          <Slider x:Name="SlOpacity" Minimum="0" Maximum="90" Value="50" Width="160"
+          <Slider x:Name="SlOpacity" Minimum="0" Maximum="100" Value="90" Width="160"
                   StepFrequency="10" TickFrequency="10" SnapsTo="StepValues"/>
-          <TextBlock x:Name="TbOpacity" Text="50%" FontSize="12" VerticalAlignment="Center"
+          <TextBlock x:Name="TbOpacity" Text="90%" FontSize="12" VerticalAlignment="Center"
                      Opacity="0.5" Width="32"/>
           <Button x:Name="BtnResetOpacity" Width="28" Height="28" Padding="0" Background="Transparent" BorderThickness="0">
             <FontIcon Glyph="&#xE72C;" FontSize="13"/>
@@ -39,8 +39,8 @@
     </Border>
 
     <!-- 弹窗设置 -->
-    <Border Padding="18,16" CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+    <Border Padding="18,16" CornerRadius="8"
+            Background="{ThemeResource PageCardBackgroundBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
       <StackPanel Spacing="10">
@@ -64,8 +64,8 @@
 
     <!-- 背景 -->
     <Border x:Name="BackgroundSettingsCard" Padding="18,16" HorizontalAlignment="Stretch"
-            CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            CornerRadius="8"
+            Background="{ThemeResource PageCardBackgroundBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
       <StackPanel x:Name="BackgroundSettingsContent" x:FieldModifier="public" Spacing="12">
@@ -115,8 +115,8 @@
     </Border>
 
     <!-- 自定义耳机图案 -->
-    <Border Padding="18,16" HorizontalAlignment="Stretch" CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+    <Border Padding="18,16" HorizontalAlignment="Stretch" CornerRadius="8"
+            Background="{ThemeResource PageCardBackgroundBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
       <StackPanel Spacing="10">
@@ -126,8 +126,8 @@
     </Border>
 
     <!-- 设备 -->
-    <Border Padding="18,16" CornerRadius="14"
-            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+    <Border Padding="18,16" CornerRadius="8"
+            Background="{ThemeResource PageCardBackgroundBrush}"
             BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
             BorderThickness="1">
       <StackPanel Spacing="10">

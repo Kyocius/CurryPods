@@ -119,6 +119,7 @@ public partial class MainWindow : Window, IViewHost
 
             var themeIndex = NextThemeIndex();
             ApplyTheme(themeIndex);
+            RefreshCardOpacity();
 
             RefreshEarphoneImages();
             BuildEarphoneCustomUi();

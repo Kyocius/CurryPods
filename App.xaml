@@ -8,6 +8,17 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <SolidColorBrush x:Key="PageCardBackgroundBrush" Color="#2C2C2C" Opacity="0.9"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="PageCardBackgroundBrush" Color="White" Opacity="0.9"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="PageCardBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
 
             <FontFamily x:Key="AppFont">Microsoft YaHei UI, Segoe UI Variable Text, Segoe UI</FontFamily>
             <SolidColorBrush x:Key="BrandAccentBrush" Color="#6090FF" />

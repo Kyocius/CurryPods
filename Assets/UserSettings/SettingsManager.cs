@@ -143,7 +143,7 @@ public sealed record AppSettings(
         "",
         true,
         false,
-        50,
+        90,
         5,
         new Dictionary<string, string>(),
         new Dictionary<string, string>(),

@@ -135,6 +135,7 @@ public partial class MainWindow
         _backgroundImages.Dispose();
         PageContent.Content = null;
         _pageContainers.Clear();
+        _pageScrollOffsets.Clear();
         SystemBackdrop = null;
         Content = null;
     }

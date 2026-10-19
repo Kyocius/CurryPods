@@ -55,7 +55,14 @@ public partial class MainWindow
 
     private void RefreshCardOpacity()
     {
-        // WinUI 3 卡片透明度
+        var opacity = ReadCardOpacity() / 100d;
+        foreach (var entry in Application.Current.Resources.ThemeDictionaries)
+        {
+            if (entry.Key is "HighContrast" || entry.Value is not ResourceDictionary resources)
+                continue;
+            if (resources.TryGetValue("PageCardBackgroundBrush", out var resource) && resource is SolidColorBrush brush)
+                brush.Opacity = opacity;
+        }
     }
 
     private int NextThemeIndex()
@@ -74,7 +81,7 @@ public partial class MainWindow
     };
 
     private int ReadCardOpacity()
-        => Math.Clamp(_uiSettings.GetInt("CardOpacity", 50), 0, 90);
+        => Math.Clamp(_uiSettings.GetInt("CardOpacity", 90), 0, 100);
 
     private bool ReadUiBool(string key, bool fallback)
         => _uiSettings.GetBool(key, fallback);
